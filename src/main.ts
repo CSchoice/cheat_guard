@@ -13,7 +13,9 @@ import * as morgan from 'morgan';
 import type { RequestHandler } from 'express';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    logger: ['error', 'warn', 'log'],
+  });
 
   // 요청 로깅(morgan)
   const morganMiddleware = morgan('dev') as RequestHandler;
