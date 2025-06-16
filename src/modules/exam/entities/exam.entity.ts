@@ -24,11 +24,11 @@ export class Exam {
   @Column({ type: 'enum', enum: ExamStatus, default: ExamStatus.CREATED })
   status: ExamStatus;
 
-  @Column({ type: 'timestamp', nullable: true })
-  startedAt: Date | null;
+  @Column({ type: 'timestamp', nullable: false })
+  startedAt: Date;
 
-  @Column({ type: 'timestamp', nullable: true })
-  endedAt: Date | null;
+  @Column({ type: 'timestamp', nullable: false })
+  endedAt: Date;
 
   @ManyToMany(() => User, { cascade: true })
   @JoinTable({
