@@ -10,6 +10,10 @@ import configuration from './configuration';
 
 // DynamicModule 타입을 명시
 import type { DynamicModule } from '@nestjs/common';
+import { StreamingGateway } from './modules/streaming/streaming.gateway';
+import { StreamingService } from './modules/streaming/streaming.service';
+import { StreamingModule } from './modules/streaming/streaming.module';
+import { AnalyzerModule } from './modules/analyzer/analyzer.module';
 
 const RootScheduleModule: DynamicModule = ScheduleModule.forRoot();
 
@@ -36,8 +40,11 @@ const RootScheduleModule: DynamicModule = ScheduleModule.forRoot();
     UsersModule,
     AuthModule,
     ExamModule,
+    StreamingModule,
+    AnalyzerModule,
 
     RootScheduleModule,
   ],
+  providers: [StreamingGateway, StreamingService],
 })
 export class AppModule {}
