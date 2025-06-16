@@ -4,6 +4,7 @@ import { Repository, ObjectLiteral } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
 import { User } from './entities/user.entity';
+import { UserResponseDto } from './dto/response/user-response.dto';
 
 type MockRepo<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
@@ -34,7 +35,7 @@ describe('UsersService', () => {
   });
 
   describe('findAll', () => {
-    it('should return an array of users', async () => {
+    it('should return an array of UserResponseDto', async () => {
       const mockUsers: User[] = [
         {
           id: 1,
@@ -45,13 +46,14 @@ describe('UsersService', () => {
       ];
       repo.find!.mockResolvedValue(mockUsers);
 
-      await expect(service.findAll()).resolves.toEqual(mockUsers);
+      const expected: UserResponseDto[] = [{ id: 1, nickname: 'test1' }];
+      await expect(service.findAll()).resolves.toEqual(expected);
       expect(repo.find).toHaveBeenCalled();
     });
   });
 
   describe('create', () => {
-    it('should hash password and save a new user', async () => {
+    it('should hash password, save user, and return UserResponseDto', async () => {
       const dto = { nickname: 'newuser', plainPassword: 'Abc123!@' };
 
       const genSaltSpy = jest.spyOn(bcrypt, 'genSalt') as jest.Mock;
@@ -59,7 +61,6 @@ describe('UsersService', () => {
       const hashSpy = jest.spyOn(bcrypt, 'hash') as jest.Mock;
       hashSpy.mockResolvedValue('hashed_pass');
 
-      // 엔티티 모킹
       const createdEntity = {
         nickname: dto.nickname,
         password: 'hashed_pass',
@@ -70,7 +71,6 @@ describe('UsersService', () => {
         password: 'hashed_pass',
         role: 'student',
       };
-
       repo.create!.mockReturnValue(createdEntity);
       repo.save!.mockResolvedValue(savedEntity);
 
@@ -83,7 +83,8 @@ describe('UsersService', () => {
         password: 'hashed_pass',
       });
       expect(repo.save).toHaveBeenCalledWith(createdEntity);
-      expect(result).toEqual(savedEntity);
+
+      expect(result).toEqual({ id: 10, nickname: 'newuser' });
     });
   });
 });
