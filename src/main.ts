@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+// src/main.ts
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
@@ -7,9 +9,15 @@ import {
   HttpStatus,
 } from '@nestjs/common';
 import { HttpErrorFilter } from './common/filters/http-exception.filter';
+import * as morgan from 'morgan';
+import type { RequestHandler } from 'express';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+
+  // 요청 로깅(morgan)
+  const morganMiddleware = morgan('dev') as RequestHandler;
+  app.use(morganMiddleware);
 
   // 1) CORS 활성화 및 글로벌 프리픽스 설정
   app.enableCors();
