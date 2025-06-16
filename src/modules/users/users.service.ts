@@ -44,12 +44,11 @@ export class UsersService {
     nickname: string,
     plainPassword: string,
   ): Promise<UserResponseDto> {
-    // 1) 닉네임 중복 검사
-    if (await this.repo.findOne({ where: { nickname } })) {
+    const exists = await this.repo.findOne({ where: { nickname } });
+    if (exists) {
       throw new ConflictException('이미 사용 중인 닉네임입니다.');
     }
 
-    // 2) 해싱 및 저장
     try {
       const salt = await bcrypt.genSalt();
       const password = await bcrypt.hash(plainPassword, salt);
@@ -61,5 +60,38 @@ export class UsersService {
         '사용자 생성 중 오류가 발생했습니다.',
       );
     }
+  }
+
+  /** 로그인용: 닉네임으로 유저 엔티티 조회 */
+  async findOneByNickname(nickname: string): Promise<User> {
+    try {
+      const user = await this.repo.findOne({ where: { nickname } });
+      if (!user) {
+        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+      }
+      return user;
+    } catch (err) {
+      if (err instanceof NotFoundException) {
+        throw err;
+      }
+      throw new InternalServerErrorException(
+        '사용자 조회 중 오류가 발생했습니다.',
+      );
+    }
+  }
+
+  /** 로그인용: 평문 비밀번호와 해시된 비밀번호 비교 */
+  async comparePassword(id: number, plainPassword: string): Promise<boolean> {
+    const user = await this.findOneById(id);
+    return bcrypt.compare(plainPassword, user.password);
+  }
+
+  /** 내부용: ID로 유저 조회 */
+  private async findOneById(id: number): Promise<User> {
+    const user = await this.repo.findOne({ where: { id } });
+    if (!user) {
+      throw new NotFoundException(`ID ${id} 번 사용자를 찾을 수 없습니다.`);
+    }
+    return user;
   }
 }
