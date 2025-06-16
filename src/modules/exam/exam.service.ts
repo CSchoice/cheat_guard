@@ -45,6 +45,48 @@ export class ExamService {
       startedAt: new Date(dto.startAt),
       endedAt: new Date(dto.endAt),
     });
+
+    exam.participants = []; // 초기 참가자는 빈 배열로 설정
+    if (exam.startedAt < new Date()) {
+      throw new ConflictException('시작 시간은 현재 시간 이후여야 합니다.');
+    }
+    if (exam.endedAt <= exam.startedAt) {
+      throw new ConflictException('종료 시간은 시작 시간 이후여야 합니다.');
+    }
+    if (exam.title.length < 2 || exam.title.length > 50) {
+      throw new ConflictException(
+        '시험 제목은 2자 이상 50자 이하이어야 합니다.',
+      );
+    }
+    if (!/^[a-zA-Z0-9ㄱ-ㅎ가-힣\s]+$/.test(exam.title)) {
+      throw new ConflictException(
+        '시험 제목은 한글, 영어, 숫자, 공백만 포함할 수 있습니다.',
+      );
+    }
+    if (exam.title.includes('  ')) {
+      throw new ConflictException(
+        '시험 제목에 연속된 공백이 포함될 수 없습니다.',
+      );
+    }
+    if (exam.title.trim() === '') {
+      throw new ConflictException('시험 제목은 공백만 포함할 수 없습니다.');
+    }
+    if (exam.title.startsWith(' ') || exam.title.endsWith(' ')) {
+      throw new ConflictException(
+        '시험 제목은 양쪽 끝에 공백을 포함할 수 없습니다.',
+      );
+    }
+    if (exam.title.includes('\n')) {
+      throw new ConflictException(
+        '시험 제목에 줄바꿈 문자가 포함될 수 없습니다.',
+      );
+    }
+    if (exam.title.includes('\r')) {
+      throw new ConflictException(
+        '시험 제목에 캐리지 리턴 문자가 포함될 수 없습니다.',
+      );
+    }
+
     try {
       const saved = await this.examRepo.save(exam);
       return this.toDto(saved);
