@@ -66,30 +66,6 @@ export class ExamController {
     return this.examService.findOne(id);
   }
 
-  @ApiOperation({ summary: '시험 시작' })
-  @ApiResponse({
-    status: 200,
-    description: '시작된 시험 반환',
-    type: ExamResponseDto,
-  })
-  @ApiResponse({ status: 404, description: '시험을 찾을 수 없음' })
-  @Post(':id/start')
-  start(@Param('id', ParseIntPipe) id: number): Promise<ExamResponseDto> {
-    return this.examService.start(id);
-  }
-
-  @ApiOperation({ summary: '시험 완료' })
-  @ApiResponse({
-    status: 200,
-    description: '완료된 시험 반환',
-    type: ExamResponseDto,
-  })
-  @ApiResponse({ status: 404, description: '시험을 찾을 수 없음' })
-  @Post(':id/complete')
-  complete(@Param('id', ParseIntPipe) id: number): Promise<ExamResponseDto> {
-    return this.examService.complete(id);
-  }
-
   @ApiOperation({ summary: '참가자 등록' })
   @ApiBody({ type: RegisterExamUserDto })
   @ApiResponse({

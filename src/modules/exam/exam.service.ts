@@ -3,6 +3,7 @@ import {
   NotFoundException,
   ConflictException,
   InternalServerErrorException,
+  Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
@@ -16,6 +17,8 @@ import { UserResponseDto } from '../users/dto/response/user-response.dto';
 
 @Injectable()
 export class ExamService {
+  private readonly logger = new Logger(ExamService.name);
+
   constructor(
     @InjectRepository(Exam) private readonly examRepo: Repository<Exam>,
     private readonly usersService: UsersService,
@@ -37,13 +40,20 @@ export class ExamService {
 
   /** 시험 생성 */
   async create(dto: CreateExamRequestDto): Promise<ExamResponseDto> {
-    const exam = this.examRepo.create(dto);
+    const exam = this.examRepo.create({
+      title: dto.title,
+      startedAt: new Date(dto.startAt),
+      endedAt: new Date(dto.endAt),
+    });
     try {
       const saved = await this.examRepo.save(exam);
       return this.toDto(saved);
-    } catch (err) {
-      if (err instanceof QueryFailedError && (err as any).code === '23505') {
-        throw new ConflictException('이미 같은 제목의 시험이 존재합니다.');
+    } catch (error: unknown) {
+      if (error instanceof QueryFailedError) {
+        const driverErr = error.driverError as { code?: string };
+        if (driverErr.code === '23505') {
+          throw new ConflictException('이미 같은 제목의 시험이 존재합니다.');
+        }
       }
       throw new InternalServerErrorException(
         '시험 생성 중 오류가 발생했습니다.',
@@ -69,56 +79,11 @@ export class ExamService {
     return this.toDto(exam);
   }
 
-  /** 시험 시작 */
-  async start(id: number): Promise<ExamResponseDto> {
-    const exam = await this.examRepo.findOne({
-      where: { id },
-      relations: ['participants'],
-    });
-    if (!exam) {
-      throw new NotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
-    }
-    exam.status = ExamStatus.STARTED;
-    exam.startedAt = new Date();
-
-    try {
-      const updated = await this.examRepo.save(exam);
-      return this.toDto(updated);
-    } catch {
-      throw new InternalServerErrorException(
-        '시험 시작 처리 중 오류가 발생했습니다.',
-      );
-    }
-  }
-
-  /** 시험 완료 */
-  async complete(id: number): Promise<ExamResponseDto> {
-    const exam = await this.examRepo.findOne({
-      where: { id },
-      relations: ['participants'],
-    });
-    if (!exam) {
-      throw new NotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
-    }
-    exam.status = ExamStatus.COMPLETED;
-    exam.endedAt = new Date();
-
-    try {
-      const updated = await this.examRepo.save(exam);
-      return this.toDto(updated);
-    } catch {
-      throw new InternalServerErrorException(
-        '시험 완료 처리 중 오류가 발생했습니다.',
-      );
-    }
-  }
-
   /** 참가자 등록 */
   async registerUser(
     id: number,
     dto: RegisterExamUserDto,
   ): Promise<ExamResponseDto> {
-    // 1) 시험 조회
     const exam = await this.examRepo.findOne({
       where: { id },
       relations: ['participants'],
@@ -127,19 +92,16 @@ export class ExamService {
       throw new NotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
     }
 
-    // 2) 중복 등록 방지
     if (exam.participants.some((u) => u.id === dto.userId)) {
       throw new ConflictException(
         `사용자(ID ${dto.userId})가 이미 등록되어 있습니다.`,
       );
     }
 
-    // 3) 사용자 엔티티 조회 (서비스 내부 메서드 사용)
     let userEntity: User;
     try {
-      // findOneById 는 UsersService에 private에서 공개된 형태로 구현해 두셔야 합니다.
       userEntity = await this.usersService['findOneById'](dto.userId);
-    } catch (err) {
+    } catch (err: unknown) {
       if (err instanceof NotFoundException) {
         throw err;
       }
@@ -148,16 +110,19 @@ export class ExamService {
       );
     }
 
-    // 4) 참가자 추가 및 저장
     exam.participants.push(userEntity);
+
     try {
       const updated = await this.examRepo.save(exam);
       return this.toDto(updated);
-    } catch (err) {
-      if (err instanceof QueryFailedError) {
-        throw new ConflictException(
-          '참가자 등록 중 DB 제약 조건 오류가 발생했습니다.',
-        );
+    } catch (error: unknown) {
+      if (error instanceof QueryFailedError) {
+        const driverErr = error.driverError as { code?: string };
+        if (driverErr.code === '23505') {
+          throw new ConflictException(
+            '참가자 등록 중 DB 제약 조건 오류가 발생했습니다.',
+          );
+        }
       }
       throw new InternalServerErrorException(
         '참가자 등록 중 오류가 발생했습니다.',
@@ -175,5 +140,34 @@ export class ExamService {
       throw new NotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
     }
     return exam.participants.map((u) => ({ id: u.id, nickname: u.nickname }));
+  }
+
+  /** 자동 상태 전환 (스케줄러용) */
+  async processScheduled(): Promise<void> {
+    const now = new Date();
+
+    const toStart = await this.examRepo
+      .createQueryBuilder('exam')
+      .where('exam.status = :status', { status: ExamStatus.CREATED })
+      .andWhere('exam.startedAt <= :now', { now })
+      .getMany();
+
+    for (const exam of toStart) {
+      exam.status = ExamStatus.STARTED;
+      this.logger.log(`자동 시작: Exam ID=${exam.id}`);
+      await this.examRepo.save(exam);
+    }
+
+    const toComplete = await this.examRepo
+      .createQueryBuilder('exam')
+      .where('exam.status = :status', { status: ExamStatus.STARTED })
+      .andWhere('exam.endedAt <= :now', { now })
+      .getMany();
+
+    for (const exam of toComplete) {
+      exam.status = ExamStatus.COMPLETED;
+      this.logger.log(`자동 완료: Exam ID=${exam.id}`);
+      await this.examRepo.save(exam);
+    }
   }
 }

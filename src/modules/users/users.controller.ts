@@ -1,4 +1,3 @@
-// src/modules/users/users.controller.ts
 import {
   Controller,
   Get,
@@ -38,20 +37,15 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @Get()
-  getAll(): Promise<UserResponseDto[]> {
-    return this.usersService.findAll();
+  async getAll(): Promise<UserResponseDto[]> {
+    return await this.usersService.findAll();
   }
 
   @ApiOperation({ summary: '새 사용자 생성 (회원가입)' })
   @ApiBody({
     description: '생성할 사용자 정보',
     type: CreateUserRequestDto,
-    schema: {
-      example: {
-        nickname: 'choi123',
-        password: 'Abcd1234!',
-      },
-    },
+    schema: { example: { nickname: 'choi123', password: 'Abcd1234!' } },
   })
   @ApiResponse({
     status: 201,
@@ -59,8 +53,8 @@ export class UsersController {
     type: UserResponseDto,
   })
   @Post()
-  create(@Body() dto: CreateUserRequestDto): Promise<UserResponseDto> {
-    return this.usersService.create(dto.nickname, dto.password);
+  async create(@Body() dto: CreateUserRequestDto): Promise<UserResponseDto> {
+    return await this.usersService.create(dto.nickname, dto.password);
   }
 
   @ApiBearerAuth('access-token')
@@ -73,7 +67,9 @@ export class UsersController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin', 'self')
   @Get(':id')
-  getOne(@Param('id', ParseIntPipe) id: number): Promise<UserResponseDto> {
-    return this.usersService.findOne(id);
+  async getOne(
+    @Param('id', ParseIntPipe) id: number,
+  ): Promise<UserResponseDto> {
+    return await this.usersService.findOne(id);
   }
 }

@@ -1,10 +1,17 @@
+// src/app.module.ts
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UsersModule } from './modules/users/users.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { ExamModule } from './modules/exam/exam.module';
+import { ScheduleModule } from '@nestjs/schedule';
 import configuration from './configuration';
+
+// DynamicModule 타입을 명시
+import type { DynamicModule } from '@nestjs/common';
+
+const RootScheduleModule: DynamicModule = ScheduleModule.forRoot();
 
 @Module({
   imports: [
@@ -21,15 +28,16 @@ import configuration from './configuration';
         database: config.get<string>('db.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
-        extra: {
-          charset: 'utf8mb4_general_ci',
-        },
+        extra: { charset: 'utf8mb4_general_ci' },
       }),
       inject: [ConfigService],
     }),
+
     UsersModule,
     AuthModule,
     ExamModule,
+
+    RootScheduleModule,
   ],
 })
 export class AppModule {}
