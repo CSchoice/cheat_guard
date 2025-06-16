@@ -1,10 +1,16 @@
-# compiled output
-/dist
-/node_modules
-/build
+# Build outputs
+dist/
+build/
 
-# Logs
-logs
+# Node modules
+node_modules/
+
+# dotenv 환경변수 파일
+.env
+.env.*.local
+
+# 로그
+logs/
 *.log
 npm-debug.log*
 pnpm-debug.log*
@@ -12,15 +18,34 @@ yarn-debug.log*
 yarn-error.log*
 lerna-debug.log*
 
-# OS
+# 테스트 커버리지
+coverage/
+.nyc_output/
+
+# OS별 불필요 파일
 .DS_Store
+Thumbs.db
 
-# Tests
-/coverage
-/.nyc_output
+# 임시 파일
+.temp/
+.tmp/
 
-# IDEs and editors
-/.idea
+# 프로세스 ID
+pids/
+*.pid
+*.pid.lock
+*.seed
+
+# Source map (빌드 시 생성)
+*.js.map
+
+# IDE & 에디터
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
 .project
 .classpath
 .c9/
@@ -28,29 +53,9 @@ lerna-debug.log*
 .settings/
 *.sublime-workspace
 
-# IDE - VSCode
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
+# Docker
+docker-compose.override.yml
 
-# dotenv environment variable files
-.env
-.env.development.local
-.env.test.local
-.env.production.local
-.env.local
-
-# temp directory
-.temp
-.tmp
-
-# Runtime data
-pids
-*.pid
-*.seed
-*.pid.lock
-
-# Diagnostic reports (https://nodejs.org/api/report.html)
-report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
+# Puppeteer 캐시(옵션)
+puppeteer/
+패키지.md
