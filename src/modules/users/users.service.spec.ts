@@ -3,7 +3,7 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, ObjectLiteral } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { UsersService } from './users.service';
-import { User } from './user.entity';
+import { User } from './entities/user.entity';
 
 type MockRepo<T extends ObjectLiteral> = Partial<
   Record<keyof Repository<T>, jest.Mock>
