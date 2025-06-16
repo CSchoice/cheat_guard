@@ -1,5 +1,5 @@
 // src/modules/exam/dto/request/create-exam.dto.ts
-import { IsString, Length, IsISO8601 } from 'class-validator';
+import { IsString, Length, IsISO8601, IsNotEmpty } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateExamRequestDto {
@@ -13,6 +13,7 @@ export class CreateExamRequestDto {
     description: '시험 시작 시간 (ISO8601)',
   })
   @IsISO8601()
+  @IsNotEmpty({ message: '시험 시작 시간은 필수입니다.' })
   startAt: string;
 
   @ApiProperty({
@@ -20,5 +21,6 @@ export class CreateExamRequestDto {
     description: '시험 종료 시간 (ISO8601)',
   })
   @IsISO8601()
+  @IsNotEmpty({ message: '시험 종료 시간은 필수입니다.' })
   endAt: string;
 }
