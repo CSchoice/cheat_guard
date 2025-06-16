@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
+import { Request } from 'express';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -16,17 +17,23 @@ export class RolesGuard implements CanActivate {
       ROLES_KEY,
       [ctx.getHandler(), ctx.getClass()],
     );
-    if (!requiredRoles) {
+    if (!requiredRoles) return true;
+
+    const request = ctx.switchToHttp().getRequest<Request>();
+    const user = request.user as { id: number; role: string };
+
+    if (requiredRoles.includes('self')) {
+      const paramId = Number(request.params.id);
+      if (paramId === user.id) {
+        return true;
+      }
+    }
+
+    // role 체크
+    if (requiredRoles.includes(user.role)) {
       return true;
     }
 
-    const request = ctx
-      .switchToHttp()
-      .getRequest<{ user?: { role?: string } }>();
-    const user = request.user;
-    if (!user || !user.role || !requiredRoles.includes(user.role)) {
-      throw new ForbiddenException('권한이 없습니다.');
-    }
-    return true;
+    throw new ForbiddenException('권한이 없습니다.');
   }
 }
