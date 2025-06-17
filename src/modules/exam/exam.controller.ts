@@ -17,6 +17,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
   ApiBody,
+  ApiParam,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
@@ -104,6 +105,12 @@ export class ExamController {
   }
 
   @ApiOperation({ summary: '시험 시작 및 세션 생성' })
+  @ApiParam({
+    name: 'id',
+    type: Number,
+    description: '시험 ID',
+    example: 8,
+  })
   @ApiResponse({
     status: 201,
     description: '시험 세션 생성 성공',
@@ -114,23 +121,19 @@ export class ExamController {
       },
     },
   })
-  @ApiResponse({
-    status: 404,
-    description: '시험을 찾을 수 없음',
-  })
+  @ApiResponse({ status: 404, description: '시험을 찾을 수 없음' })
   @ApiResponse({
     status: 409,
-    description: '이미 시험에 참가 중이거나 권한 없음',
+    description: '이미 시험이 시작되었거나 권한 없음',
   })
   @Post(':id/start')
   @Roles('student')
   @HttpCode(HttpStatus.CREATED)
   async startExam(
     @Param('id', ParseIntPipe) examId: number,
-    @Body() dto: StartExamDto,
-    @Req() req: Request,
+    @Req() req: any,
   ): Promise<{ sessionId: string; fastApiUrl: string }> {
-    const userId = (req.user as any).id;
-    return this.examService.startExam(examId, userId, dto.fastApiUrl);
+    const userId = req.user.id;
+    return this.examService.startExam(examId, userId);
   }
 }

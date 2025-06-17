@@ -184,65 +184,39 @@ export class ExamService {
     return exam.participants.map((u) => ({ id: u.id, nickname: u.nickname }));
   }
 
-  /**
-   * 시험 시작 및 세션 생성
-   * @param examId 시험 ID
-   * @param userId 사용자 ID
-   * @param fastApiUrl FastAPI 서버 URL (선택사항)
-   * @returns 생성된 세션 정보
-   */
   async startExam(
     examId: number,
     userId: number,
-    fastApiUrl?: string,
   ): Promise<{ sessionId: string; fastApiUrl: string }> {
-    // 1. 시험 조회
+    // 1) 시험 조회
     const exam = await this.examRepo.findOne({
       where: { id: examId },
       relations: ['participants'],
     });
+    if (!exam) throw new NotFoundException('시험을 찾을 수 없습니다.');
 
-    if (!exam) {
-      throw new NotFoundException('시험을 찾을 수 없습니다.');
-    }
-
-    // 2. 사용자 조회
-    const user = await this.usersService.findOne(userId);
-    if (!user) {
-      throw new NotFoundException('사용자를 찾을 수 없습니다.');
-    }
-
-    // 3. 참가 여부 확인
-    const isParticipant = exam.participants.some((p) => p.id === userId);
-    if (!isParticipant) {
+    // 2) 참가 여부 확인
+    if (!exam.participants.some((p) => p.id === userId)) {
       throw new ConflictException('시험에 참가하지 않은 사용자입니다.');
     }
 
-    // 4. 이미 시험을 시작했는지 확인 (세션 ID가 있는 경우)
-    const existingSession = await this.examRepo
-      .createQueryBuilder('exam')
-      .innerJoinAndSelect('exam.sessions', 'session')
-      .where('exam.id = :examId', { examId })
-      .andWhere('session.userId = :userId', { userId })
-      .getOne();
-
-    if (existingSession) {
-      throw new ConflictException('이미 시험을 시작하셨습니다.');
+    // 3) 이미 시작 혹은 완료된 시험인지 체크
+    if (exam.status !== ExamStatus.CREATED) {
+      throw new ConflictException('이미 시작되었거나 종료된 시험입니다.');
     }
 
-    // 5. 세션 ID 생성 (examId_userId_timestamp 형식)
+    // 4) 상태 변경
+    exam.status = ExamStatus.STARTED;
+    // exam.startedAt = new Date();    // 스케줄된 시간이 아니라 '실제' 시작 시간으로 덮어쓰려면 활성화
+
+    // await this.examRepo.save(exam);
+
+    // 5) sessionId, fastApiUrl 생성 (필요하다면)
     const timestamp = Date.now();
     const sessionId = `session_${examId}_${userId}_${timestamp}`;
+    const fastApiUrl = process.env.FAST_API_URL || 'http://localhost:8000';
 
-    // 6. FastAPI URL이 제공되지 않은 경우 기본값 사용
-    const finalFastApiUrl =
-      fastApiUrl || process.env.FAST_API_URL || 'http://localhost:8000';
-
-    // 7. 세션 정보 반환
-    return {
-      sessionId,
-      fastApiUrl: finalFastApiUrl,
-    };
+    return { sessionId, fastApiUrl };
   }
 
   /** 자동 상태 전환 (스케줄러용) */
