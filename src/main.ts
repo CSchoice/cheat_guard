@@ -22,7 +22,12 @@ async function bootstrap() {
   app.use(morganMiddleware);
 
   // 1) CORS 활성화 및 글로벌 프리픽스 설정
-  app.enableCors();
+  app.enableCors({
+    origin: true, // 모든 출처 허용
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: true, // 인증 정보 허용
+    allowedHeaders: 'Content-Type, Accept, Authorization',
+  });
   app.setGlobalPrefix('api');
 
   // 2) ValidationPipe & ExceptionFactory 설정
