@@ -1,9 +1,7 @@
-// src/modules/auth/strategies/jwt.strategy.ts
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import { ExtractJwt, Strategy } from 'passport-jwt';
 import { ConfigService } from '@nestjs/config';
-import { UserResponseDto } from '../../modules/users/dto/response/user-response.dto';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
@@ -19,7 +17,11 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     });
   }
 
-  validate(payload: { sub: number; nickname: string }): UserResponseDto {
-    return { id: payload.sub, nickname: payload.nickname };
+  validate(payload: { sub: number; nickname: string; role: string }): any {
+    return {
+      id: payload.sub,
+      nickname: payload.nickname,
+      role: payload.role,
+    };
   }
 }

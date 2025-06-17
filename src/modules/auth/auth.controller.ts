@@ -13,6 +13,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { LoginRequestDto } from './dto/request/login-request.dto';
 import { LoginResponseDto } from './dto/response/login-response.dto';
 import { UserResponseDto } from '../users/dto/response/user-response.dto';
+import { LoginUserPayloadClass } from 'src/common/guards/login-user-payload';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -26,12 +27,12 @@ export class AuthController {
     description: 'JWT 토큰 반환',
     type: LoginResponseDto,
   })
-  @UseGuards(LocalAuthGuard)
   @Post('login')
-  async login(
-    @Request() req: { user: UserResponseDto },
+  @UseGuards(LocalAuthGuard)
+  login(
+    @Request() req: { user: LoginUserPayloadClass },
   ): Promise<LoginResponseDto> {
-    return this.authService.login(req.user);
+    return Promise.resolve(this.authService.login(req.user));
   }
 
   @ApiOperation({ summary: '내 정보 조회 (토큰 필요)' })

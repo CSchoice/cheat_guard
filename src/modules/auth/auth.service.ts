@@ -6,8 +6,11 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '../users/users.service';
-import { UserResponseDto } from '../users/dto/response/user-response.dto';
 import { User } from '../users/entities/user.entity';
+import {
+  LoginUserPayload,
+  LoginUserPayloadClass,
+} from 'src/common/guards/login-user-payload';
 
 @Injectable()
 export class AuthService {
@@ -19,10 +22,11 @@ export class AuthService {
   async validateUser(
     nickname: string,
     plainPassword: string,
-  ): Promise<UserResponseDto> {
+  ): Promise<LoginUserPayload> {
     let userEntity: User;
     try {
       userEntity = await this.usersService.findOneByNickname(nickname);
+      console.log('Found user entity:', userEntity); // 디버깅용 로그 추가
     } catch (err: unknown) {
       if (err instanceof NotFoundException) {
         throw new NotFoundException({
@@ -44,13 +48,19 @@ export class AuthService {
       });
     }
 
-    return { id: userEntity.id, nickname: userEntity.nickname };
+    const loginUser = new LoginUserPayloadClass(
+      userEntity.id,
+      userEntity.nickname,
+      userEntity.role || 'student', // 기본값 설정
+    );
+    console.log('Returning login user:', loginUser); // 디버깅용 로그 추가
+    return loginUser;
   }
 
-  login(user: UserResponseDto): Promise<{ accessToken: string }> {
-    const payload = { sub: user.id, nickname: user.nickname };
-    return Promise.resolve({
+  login(user: LoginUserPayloadClass): { accessToken: string } {
+    const payload = { sub: user.id, nickname: user.nickname, role: user.role };
+    return {
       accessToken: this.jwtService.sign(payload),
-    });
+    };
   }
 }
