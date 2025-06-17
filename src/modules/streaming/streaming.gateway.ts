@@ -58,11 +58,7 @@ export class StreamingGateway
       );
       client.emit('analysis', result);
     } catch (err) {
-      console.error(
-        '[StreamingGateway] analyze error for',
-        client.id,
-        err,
-      );
+      console.error('[StreamingGateway] analyze error for', client.id, err);
       client.emit('error', {
         message: '분석 중 오류 발생',
         details: err instanceof Error ? err.message : String(err),
