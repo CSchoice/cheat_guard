@@ -1,31 +1,36 @@
 import {
   Controller,
-  Post,
   Get,
-  Param,
+  Post,
   Body,
-  ParseIntPipe,
+  Param,
   UseGuards,
-  HttpCode,
+  ParseIntPipe,
   HttpStatus,
+  HttpCode,
+  Req,
+  Request,
 } from '@nestjs/common';
 import {
   ApiTags,
-  ApiBearerAuth,
   ApiOperation,
   ApiResponse,
+  ApiBearerAuth,
   ApiBody,
 } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
+import { RolesGuard } from '../../common/guards/roles.guard';
+import { Roles } from '../../common/decorators/roles.decorator';
 import { ExamService } from './exam.service';
 import { CreateExamRequestDto } from './dto/request/create-exam.dto';
+import { StartExamDto } from './dto/request/start-exam.dto';
 import { RegisterExamUserDto } from './dto/request/register-exam-user.dto';
-import { ExamResponseDto } from './dto/response/exam-response.dto';
 import { UserResponseDto } from '../users/dto/response/user-response.dto';
+import { ExamResponseDto } from './dto/response/exam-response.dto';
 
 @ApiTags('exams')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('exams')
 export class ExamController {
   constructor(private readonly examService: ExamService) {}
@@ -96,5 +101,36 @@ export class ExamController {
     @Param('id', ParseIntPipe) id: number,
   ): Promise<UserResponseDto[]> {
     return this.examService.getParticipants(id);
+  }
+
+  @ApiOperation({ summary: '시험 시작 및 세션 생성' })
+  @ApiResponse({
+    status: 201,
+    description: '시험 세션 생성 성공',
+    schema: {
+      example: {
+        sessionId: 'session_1234567890_1_1',
+        fastApiUrl: 'http://localhost:8000',
+      },
+    },
+  })
+  @ApiResponse({
+    status: 404,
+    description: '시험을 찾을 수 없음',
+  })
+  @ApiResponse({
+    status: 409,
+    description: '이미 시험에 참가 중이거나 권한 없음',
+  })
+  @Post(':id/start')
+  @Roles('student')
+  @HttpCode(HttpStatus.CREATED)
+  async startExam(
+    @Param('id', ParseIntPipe) examId: number,
+    @Body() dto: StartExamDto,
+    @Req() req: Request,
+  ): Promise<{ sessionId: string; fastApiUrl: string }> {
+    const userId = (req.user as any).id;
+    return this.examService.startExam(examId, userId, dto.fastApiUrl);
   }
 }

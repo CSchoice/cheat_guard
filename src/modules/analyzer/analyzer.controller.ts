@@ -57,7 +57,7 @@ export class AnalyzerController {
   @UseInterceptors(FileInterceptor('frame'))
   async upload(
     @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,                     // ← 추가
+    @Req() req: any, // ← 추가
   ) {
     // ★ 디버깅: 여기에 찍어보세요
     console.log('>>> controller req.user =', req.user);

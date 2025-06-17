@@ -184,6 +184,67 @@ export class ExamService {
     return exam.participants.map((u) => ({ id: u.id, nickname: u.nickname }));
   }
 
+  /**
+   * 시험 시작 및 세션 생성
+   * @param examId 시험 ID
+   * @param userId 사용자 ID
+   * @param fastApiUrl FastAPI 서버 URL (선택사항)
+   * @returns 생성된 세션 정보
+   */
+  async startExam(
+    examId: number,
+    userId: number,
+    fastApiUrl?: string,
+  ): Promise<{ sessionId: string; fastApiUrl: string }> {
+    // 1. 시험 조회
+    const exam = await this.examRepo.findOne({
+      where: { id: examId },
+      relations: ['participants'],
+    });
+
+    if (!exam) {
+      throw new NotFoundException('시험을 찾을 수 없습니다.');
+    }
+
+    // 2. 사용자 조회
+    const user = await this.usersService.findOne(userId);
+    if (!user) {
+      throw new NotFoundException('사용자를 찾을 수 없습니다.');
+    }
+
+    // 3. 참가 여부 확인
+    const isParticipant = exam.participants.some((p) => p.id === userId);
+    if (!isParticipant) {
+      throw new ConflictException('시험에 참가하지 않은 사용자입니다.');
+    }
+
+    // 4. 이미 시험을 시작했는지 확인 (세션 ID가 있는 경우)
+    const existingSession = await this.examRepo
+      .createQueryBuilder('exam')
+      .innerJoinAndSelect('exam.sessions', 'session')
+      .where('exam.id = :examId', { examId })
+      .andWhere('session.userId = :userId', { userId })
+      .getOne();
+
+    if (existingSession) {
+      throw new ConflictException('이미 시험을 시작하셨습니다.');
+    }
+
+    // 5. 세션 ID 생성 (examId_userId_timestamp 형식)
+    const timestamp = Date.now();
+    const sessionId = `session_${examId}_${userId}_${timestamp}`;
+
+    // 6. FastAPI URL이 제공되지 않은 경우 기본값 사용
+    const finalFastApiUrl =
+      fastApiUrl || process.env.FAST_API_URL || 'http://localhost:8000';
+
+    // 7. 세션 정보 반환
+    return {
+      sessionId,
+      fastApiUrl: finalFastApiUrl,
+    };
+  }
+
   /** 자동 상태 전환 (스케줄러용) */
   async processScheduled(): Promise<void> {
     const now = new Date();
