@@ -35,7 +35,7 @@ export class UsersController {
     isArray: true,
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin')
+  @Roles('student')
   @Get()
   async getAll(): Promise<UserResponseDto[]> {
     return await this.usersService.findAll();
@@ -65,7 +65,7 @@ export class UsersController {
     type: UserResponseDto,
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('admin', 'self')
+  @Roles('student', 'self')
   @Get(':id')
   async getOne(
     @Param('id', ParseIntPipe) id: number,
