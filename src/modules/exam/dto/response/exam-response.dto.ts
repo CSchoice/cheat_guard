@@ -1,6 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
 import { ExamStatus } from '../../entities/exam.entity';
-import { UserResponseDto } from '../../../users/dto/response/user-response.dto';
 
 export class ExamResponseDto {
   @ApiProperty({ example: 1, description: '시험 ID' })
@@ -31,8 +30,9 @@ export class ExamResponseDto {
   endedAt: Date | null;
 
   @ApiProperty({
-    type: [UserResponseDto],
-    description: '참가자 목록',
+    example: true,
+    description: '내가 참여중인지 여부',
+    nullable: false,
   })
-  participants: UserResponseDto[];
+  isParticipating: boolean;
 }

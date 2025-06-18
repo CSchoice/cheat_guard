@@ -30,6 +30,9 @@ export class Exam {
   @Column({ type: 'timestamp', nullable: false })
   endedAt: Date;
 
+  @Column({ type: 'int', nullable: false })
+  creatorId: number;
+
   @ManyToMany(() => User, { cascade: true })
   @JoinTable({
     name: 'exam_participants',

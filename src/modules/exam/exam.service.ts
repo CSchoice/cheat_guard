@@ -25,25 +25,27 @@ export class ExamService {
   ) {}
 
   /** Entity → DTO 변환 */
-  private toDto(exam: Exam): ExamResponseDto {
+  private toDto(exam: Exam, userId: number): ExamResponseDto {
     const dto = new ExamResponseDto();
     dto.id = exam.id;
     dto.title = exam.title;
     dto.status = exam.status;
     dto.startedAt = exam.startedAt;
     dto.endedAt = exam.endedAt;
-    dto.participants = exam.participants.map(
-      (u) => ({ id: u.id, nickname: u.nickname }) as UserResponseDto,
-    );
+    dto.isParticipating = exam.participants.some((u) => u.id === userId);
     return dto;
   }
 
   /** 시험 생성 */
-  async create(dto: CreateExamRequestDto): Promise<ExamResponseDto> {
+  async create(
+    dto: CreateExamRequestDto,
+    userId: number,
+  ): Promise<ExamResponseDto> {
     const exam = this.examRepo.create({
       title: dto.title,
       startedAt: new Date(dto.startAt),
       endedAt: new Date(dto.endAt),
+      creatorId: userId,
     });
 
     exam.participants = []; // 초기 참가자는 빈 배열로 설정
@@ -89,7 +91,7 @@ export class ExamService {
 
     try {
       const saved = await this.examRepo.save(exam);
-      return this.toDto(saved);
+      return this.toDto(saved, userId);
     } catch (error: unknown) {
       if (error instanceof QueryFailedError) {
         const driverErr = error.driverError as { code?: string };
@@ -104,13 +106,13 @@ export class ExamService {
   }
 
   /** 모든 시험 조회 */
-  async findAll(): Promise<ExamResponseDto[]> {
+  async findAll(userId: number): Promise<ExamResponseDto[]> {
     const exams = await this.examRepo.find({ relations: ['participants'] });
-    return exams.map((e) => this.toDto(e));
+    return exams.map((e) => this.toDto(e, userId));
   }
 
   /** 단일 시험 조회 */
-  async findOne(id: number): Promise<ExamResponseDto> {
+  async findOne(id: number, userId: number): Promise<ExamResponseDto> {
     const exam = await this.examRepo.findOne({
       where: { id },
       relations: ['participants'],
@@ -118,7 +120,7 @@ export class ExamService {
     if (!exam) {
       throw new NotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
     }
-    return this.toDto(exam);
+    return this.toDto(exam, userId);
   }
 
   /** 참가자 등록 */
@@ -156,7 +158,37 @@ export class ExamService {
 
     try {
       const updated = await this.examRepo.save(exam);
-      return this.toDto(updated);
+      return this.toDto(updated, dto.userId);
+    } catch (error: unknown) {
+      if (error instanceof QueryFailedError) {
+        const driverErr = error.driverError as { code?: string };
+        if (driverErr.code === '23505') {
+          throw new ConflictException(
+            '참가자 등록 중 DB 제약 조건 오류가 발생했습니다.',
+          );
+        }
+      }
+      throw new InternalServerErrorException(
+        '참가자 등록 중 오류가 발생했습니다.',
+      );
+    }
+  }
+
+  /** 참가 등록 취소 */
+  async unregisterUser(id: number, userId: number): Promise<ExamResponseDto> {
+    const exam = await this.examRepo.findOne({
+      where: { id },
+      relations: ['participants'],
+    });
+    if (!exam) {
+      throw new NotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
+    }
+
+    exam.participants = exam.participants.filter((u) => u.id !== userId);
+
+    try {
+      const updated = await this.examRepo.save(exam);
+      return this.toDto(updated, userId);
     } catch (error: unknown) {
       if (error instanceof QueryFailedError) {
         const driverErr = error.driverError as { code?: string };
@@ -217,6 +249,18 @@ export class ExamService {
     const fastApiUrl = process.env.FAST_API_URL || 'http://localhost:8000';
 
     return { sessionId, fastApiUrl };
+  }
+
+  /** 내가 참여중인 시험 조회 */
+  async findMyExams(userId: number): Promise<ExamResponseDto[]> {
+    // participants 에 userId 가 포함된 exam 조회
+    const exams = await this.examRepo
+      .createQueryBuilder('exam')
+      .leftJoinAndSelect('exam.participants', 'user')
+      .where('user.id = :userId', { userId })
+      .getMany();
+
+    return exams.map((e) => this.toDto(e, userId));
   }
 
   /** 자동 상태 전환 (스케줄러용) */

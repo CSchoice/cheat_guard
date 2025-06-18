@@ -6,8 +6,8 @@ import { AuthModule } from '../auth/auth.module';
 
 @Module({
   imports: [
-    AnalyzerModule,  // AnalyzerService 제공
-    AuthModule,      // JwtService 와 JwtStrategy 제공
+    AnalyzerModule, // AnalyzerService 제공
+    AuthModule, // JwtService 와 JwtStrategy 제공
   ],
   providers: [StreamingGateway],
 })
