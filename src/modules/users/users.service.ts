@@ -1,15 +1,14 @@
-// src/modules/users/users.service.ts
-import {
-  Injectable,
-  ConflictException,
-  NotFoundException,
-  InternalServerErrorException,
-} from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/response/user-response.dto';
+import {
+  ConflictException,
+  InternalServerErrorException,
+  UserNotFoundException,
+} from '../../common/exceptions/business.exception';
 
 @Injectable()
 export class UsersService {
@@ -32,11 +31,20 @@ export class UsersService {
 
   /** 단일 사용자 조회 */
   async findOne(id: number): Promise<UserResponseDto> {
-    const user = await this.repo.findOne({ where: { id } });
-    if (!user) {
-      throw new NotFoundException(`ID ${id} 번 사용자를 찾을 수 없습니다.`);
+    try {
+      const user = await this.repo.findOne({ where: { id } });
+      if (!user) {
+        throw new UserNotFoundException(id);
+      }
+      return { id: user.id, nickname: user.nickname };
+    } catch (error) {
+      if (error instanceof UserNotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        '사용자 조회 중 오류가 발생했습니다.',
+      );
     }
-    return { id: user.id, nickname: user.nickname };
   }
 
   /** 회원 가입 */
@@ -67,12 +75,12 @@ export class UsersService {
     try {
       const user = await this.repo.findOne({ where: { nickname } });
       if (!user) {
-        throw new NotFoundException('사용자를 찾을 수 없습니다.');
+        throw new UserNotFoundException(nickname);
       }
       return user;
-    } catch (err) {
-      if (err instanceof NotFoundException) {
-        throw err;
+    } catch (error) {
+      if (error instanceof UserNotFoundException) {
+        throw error;
       }
       throw new InternalServerErrorException(
         '사용자 조회 중 오류가 발생했습니다.',
@@ -88,10 +96,19 @@ export class UsersService {
 
   /** 내부용: ID로 유저 조회 */
   private async findOneById(id: number): Promise<User> {
-    const user = await this.repo.findOne({ where: { id } });
-    if (!user) {
-      throw new NotFoundException(`ID ${id} 번 사용자를 찾을 수 없습니다.`);
+    try {
+      const user = await this.repo.findOne({ where: { id } });
+      if (!user) {
+        throw new UserNotFoundException(id);
+      }
+      return user;
+    } catch (error) {
+      if (error instanceof UserNotFoundException) {
+        throw error;
+      }
+      throw new InternalServerErrorException(
+        '사용자 조회 중 오류가 발생했습니다.',
+      );
     }
-    return user;
   }
 }

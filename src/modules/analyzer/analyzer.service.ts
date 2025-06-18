@@ -1,9 +1,8 @@
+import { Injectable, Logger } from '@nestjs/common';
 import {
-  Injectable,
-  Logger,
   InternalServerErrorException,
   ConflictException,
-} from '@nestjs/common';
+} from '../../common/exceptions/business.exception';
 import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
@@ -72,7 +71,7 @@ export class AnalyzerService {
     userId: number,
   ): Promise<AIResponse> {
     if (!frame || !Buffer.isBuffer(frame)) {
-      throw new Error('유효하지 않은 프레임 데이터입니다.');
+      throw new ConflictException('유효하지 않은 프레임 데이터입니다.');
     }
     const startTime = Date.now();
     const logContext: LogContext = {
