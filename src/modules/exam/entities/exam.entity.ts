@@ -1,11 +1,6 @@
-import {
-  Entity,
-  PrimaryGeneratedColumn,
-  Column,
-  ManyToMany,
-  JoinTable,
-} from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+// src/modules/exams/entities/exam.entity.ts
+import { Entity, PrimaryGeneratedColumn, Column, OneToMany } from 'typeorm';
+import { ExamParticipant } from './exam-participant.entity';
 
 export enum ExamStatus {
   CREATED = 'created',
@@ -21,23 +16,12 @@ export class Exam {
   @Column({ length: 100 })
   title: string;
 
-  @Column({ type: 'enum', enum: ExamStatus, default: ExamStatus.CREATED })
-  status: ExamStatus;
-
   @Column({ type: 'timestamp', nullable: false })
-  startedAt: Date;
-
-  @Column({ type: 'timestamp', nullable: false })
-  endedAt: Date;
+  deadlineAt: Date;
 
   @Column({ type: 'int', nullable: false })
   creatorId: number;
 
-  @ManyToMany(() => User, { cascade: true })
-  @JoinTable({
-    name: 'exam_participants',
-    joinColumn: { name: 'exam_id', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'user_id', referencedColumnName: 'id' },
-  })
-  participants: User[];
+  @OneToMany(() => ExamParticipant, (ep) => ep.exam)
+  examParticipants: ExamParticipant[];
 }

@@ -29,6 +29,7 @@ import { CreateExamRequestDto } from './dto/request/create-exam.dto';
 import { RegisterExamUserDto } from './dto/request/register-exam-user.dto';
 import { ExamResponseDto } from './dto/response/exam-response.dto';
 import { UserResponseDto } from '../users/dto/response/user-response.dto';
+import { ExamDetailResponseDto } from './dto/response/exam-detail-response.dto';
 
 @ApiTags('exams')
 @ApiBearerAuth('access-token')
@@ -86,7 +87,7 @@ export class ExamController {
   @ApiResponse({
     status: 200,
     description: '시험 정보 반환 (내 참여 여부 포함)',
-    type: ExamResponseDto,
+    type: ExamDetailResponseDto,
   })
   @ApiResponse({ status: 404, description: '시험을 찾을 수 없음' })
   @Roles('student')
@@ -94,7 +95,7 @@ export class ExamController {
   findOne(
     @Param('id', ParseIntPipe) id: number,
     @Req() req: any,
-  ): Promise<ExamResponseDto> {
+  ): Promise<ExamDetailResponseDto> {
     const userId = req.user.id;
     return this.examService.findOne(id, userId);
   }
@@ -181,5 +182,21 @@ export class ExamController {
   ): Promise<{ sessionId: string; fastApiUrl: string }> {
     const userId = req.user.id;
     return this.examService.startExam(examId, userId);
+  }
+
+  @ApiOperation({ summary: '시험 종료' })
+  @ApiResponse({
+    status: 200,
+    description: '시험 종료 성공',
+    type: ExamResponseDto,
+  })
+  @Roles('student')
+  @Put(':id/stop')
+  stopExam(
+    @Param('id', ParseIntPipe) examId: number,
+    @Req() req: any,
+  ): Promise<ExamResponseDto> {
+    const userId = req.user.id;
+    return this.examService.endExam(examId, userId);
   }
 }

@@ -11,18 +11,4 @@ export class ExamScheduler {
   private readonly logger = new Logger(ExamScheduler.name);
 
   constructor(private readonly examService: ExamService) {}
-
-  @EveryMinuteCron
-  async handleCron(): Promise<void> {
-    this.logger.debug('스케줄 시작');
-    try {
-      await this.examService.processScheduled();
-      this.logger.debug('스케줄 완료');
-    } catch (e: unknown) {
-      this.logger.error(
-        '스케줄 중 오류',
-        e instanceof Error ? e.stack : String(e),
-      );
-    }
-  }
 }

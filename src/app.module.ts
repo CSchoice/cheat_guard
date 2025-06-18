@@ -30,6 +30,7 @@ const RootScheduleModule: DynamicModule = ScheduleModule.forRoot();
         database: config.get<string>('db.database'),
         entities: [__dirname + '/**/*.entity{.ts,.js}'],
         synchronize: true,
+        // dropSchema: true,
         extra: { charset: 'utf8mb4_general_ci' },
       }),
       inject: [ConfigService],

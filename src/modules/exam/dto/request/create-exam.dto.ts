@@ -9,18 +9,10 @@ export class CreateExamRequestDto {
   title: string;
 
   @ApiProperty({
-    example: '2025-06-17T10:00:00.000Z',
-    description: '시험 시작 시간 (ISO8601)',
-  })
-  @IsISO8601()
-  @IsNotEmpty({ message: '시험 시작 시간은 필수입니다.' })
-  startAt: string;
-
-  @ApiProperty({
     example: '2025-06-17T12:00:00.000Z',
-    description: '시험 종료 시간 (ISO8601)',
+    description: '시험 마감 시간 (ISO8601)',
   })
   @IsISO8601()
-  @IsNotEmpty({ message: '시험 종료 시간은 필수입니다.' })
-  endAt: string;
+  @IsNotEmpty({ message: '시험 마감 시간은 필수입니다.' })
+  deadlineAt: string;
 }
