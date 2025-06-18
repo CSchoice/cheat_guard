@@ -40,15 +40,20 @@ export class S3Service {
   }
 
   async getPresignedUrl(key: string, expiresInSeconds = 300): Promise<string> {
+    // 전체 URL이 들어온 경우 Key만 추출
+    if (key.startsWith(`https://${this.bucket}.s3.${this.region}.amazonaws.com/`)) {
+      key = key.replace(`https://${this.bucket}.s3.${this.region}.amazonaws.com/`, '');
+    }
+  
     const command = new GetObjectCommand({
       Bucket: this.bucket,
       Key: key,
     });
-
+  
     const url = await getSignedUrl(this.s3, command, {
       expiresIn: expiresInSeconds,
     });
-
+  
     return url;
   }
 
