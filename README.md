@@ -1,98 +1,135 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+# CheatGuard - 종합 온라인 시험 감독 시스템
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+CheatGuard는 온라인 시험 환경에서 부정행위를 종합적으로 감지하고 방지하는 웹 기반 시스템입니다. 이 시스템은 강사가 시험을 생성 및 관리하고, 학생들이 안전한 환경에서 시험을 응시하도록 지원하며, AI 기반의 실시간 감지 및 분석 기능을 제공합니다.
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+---
+## 배포 경로
 
-## Description
+* **데모**: [CheatGuard 데모](https://cheat-guard-front-2nb7l10a3-chois-projects-115f9e6c.vercel.app/)
+(테스트 계정: id: `test1234` / password: `test1234!`)
+* **API 문서**: [Swagger](https://backend.cheatguard.site/api/docs)
+* **백엔드**: [백엔드 Git](https://github.com/CSchoice/cheat_guard)
+* **프론트엔드**: [프론트엔드 Git](https://github.com/CSchoice/cheat_guard_front)
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+---
 
-## Project setup
+## 🛠 전체 기술 스택
 
-```bash
-$ npm install
+* **프론트엔드**: React 18, React Router 6, Chakra UI, Axios, Socket.IO Client
+* **백엔드**: NestJS 9.x, MariaDB(TypeORM), JWT, Passport, AWS S3, WebSocket
+* **AI 서비스**: FastAPI, YOLOv10, MediaPipe, PyTorch, OpenCV, NumPy
+
+---
+
+## 🌟 주요 기능
+
+### 1. 사용자 관리 및 인증
+
+* JWT 기반 인증
+* 역할 기반 접근 제어 (RBAC)
+* 사용자 프로필 및 계정 관리
+
+### 2. 시험 관리
+
+* 시험 생성 및 일정 관리
+* 실시간 시험 모니터링 및 분석
+* 부정행위 기록 및 관리
+
+### 3. 실시간 감독
+
+* 웹캠을 통한 실시간 화상 스트리밍
+* WebSocket 기반 실시간 통신
+* 네트워크 자동 재연결
+
+### 4. AI 기반 부정행위 감지
+
+* YOLOv10을 활용한 실시간 객체 감지
+* MediaPipe를 활용한 시선 추적
+* 의심스러운 행동 실시간 분석 및 알림
+
+## 📌 전체 시스템 아키텍처
+
+### 백엔드
+
+```
+src/
+├── common/                 # 공통 모듈 (가드, 파이프, 필터 등)
+├── config/                 # 환경 설정
+├── modules/                # 기능별 모듈
+│   ├── analyzer/           # 부정행위 분석
+│   ├── auth/               # 인증/인가
+│   ├── exam/               # 시험 관리
+│   ├── health/             # 헬스 체크
+│   ├── streaming/          # 실시간 스트리밍
+│   └── users/              # 사용자 관리
+└── shared/                 # 공유 유틸리티
 ```
 
-## Compile and run the project
+### AI 서버
 
-```bash
-# development
-$ npm run start
-
-# watch mode
-$ npm run start:dev
-
-# production mode
-$ npm run start:prod
+```
+cheat_guard_ai/
+├── ai/                     # AI 모델 및 관련 코드
+│   └── main.py             # 메인 애플리케이션 진입점
+├── requirements.txt        # 프로젝트 의존성
+├── yolo_server.py          # FastAPI 서버
+├── yolov10l.pt             # YOLOv10 L 모델 (대형)
+└── yolov10n.pt             # YOLOv10 N 모델 (소형)
 ```
 
-## Run tests
+### 프론트엔드
 
-```bash
-# unit tests
-$ npm run test
-
-# e2e tests
-$ npm run test:e2e
-
-# test coverage
-$ npm run test:cov
+```
+src/
+├── api/                    # API 요청
+├── assets/                 # 정적 자원
+├── components/             # 재사용 가능한 컴포넌트
+├── contexts/               # 전역 상태 관리
+├── hooks/                  # 커스텀 훅
+├── pages/                  # 페이지 컴포넌트
+├── services/               # 비즈니스 로직
+├── styles/                 # 전역 스타일
+└── utils/                  # 유틸리티 함수
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## 🚀 설치 및 실행
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+### 백엔드
 
 ```bash
-$ npm install -g @nestjs/mau
-$ mau deploy
+git clone [backend-repo-url]
+cd cheat_guard
+npm install
+
+# 환경 변수 설정 (.env 파일 생성)
+npm run typeorm migration:run
+
+# 실행
+npm run start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+### AI 서버
 
-## Resources
+```bash
+git clone https://github.com/CSchoice/cheat_guard_ai.git
+cd cheat_guard_ai
+python -m venv venv
+source venv/bin/activate  # Linux/macOS
+.\venv\Scripts\activate  # Windows
+pip install -r requirements.txt
 
-Check out a few resources that may come in handy when working with NestJS:
+uvicorn yolo_server:app --host 0.0.0.0 --port 8000 --reload
+```
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+### 프론트엔드
 
-## Support
+```bash
+git clone [frontend-repo-url]
+cd cheat-guard-front
+npm install
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
-
-## Stay in touch
-
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
-
-## License
-
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+# 환경 변수 설정 (.env 파일 생성)
+npm start
+```
