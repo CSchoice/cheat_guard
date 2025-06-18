@@ -14,6 +14,13 @@ export class CheatingLogItemDto {
     nullable: false,
   })
   reason: string;
+
+  @ApiProperty({
+    example: 'https://example.com/image.jpg',
+    description: '부정행위 이미지 URL',
+    nullable: true,
+  })
+  imageUrl?: string;
 }
 
 export class ExamDetailResponseDto {

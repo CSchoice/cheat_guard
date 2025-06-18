@@ -6,6 +6,8 @@ import {
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { v4 as uuid } from 'uuid';
+import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
+import { GetObjectCommand } from '@aws-sdk/client-s3';
 
 @Injectable()
 export class S3Service {
@@ -35,6 +37,19 @@ export class S3Service {
 
     this.bucket = bucket;
     this.region = region;
+  }
+
+  async getPresignedUrl(key: string, expiresInSeconds = 300): Promise<string> {
+    const command = new GetObjectCommand({
+      Bucket: this.bucket,
+      Key: key,
+    });
+
+    const url = await getSignedUrl(this.s3, command, {
+      expiresIn: expiresInSeconds,
+    });
+
+    return url;
   }
 
   async uploadBase64Image(

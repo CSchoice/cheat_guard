@@ -15,6 +15,6 @@ const AxiosModule: DynamicModule = HttpModule.register({
   imports: [AxiosModule, TypeOrmModule.forFeature([CheatingRecordEntity])],
   controllers: [AnalyzerController],
   providers: [AnalyzerService, S3Service],
-  exports: [AnalyzerService],
+  exports: [AnalyzerService, S3Service],
 })
 export class AnalyzerModule {}

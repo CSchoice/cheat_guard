@@ -19,6 +19,7 @@ import { UserResponseDto } from '../users/dto/response/user-response.dto';
 import { ExamParticipant } from './entities/exam-participant.entity';
 import { ExamDetailResponseDto } from './dto/response/exam-detail-response.dto';
 import { CheatingRecordEntity } from '../analyzer/entities/cheating-record.entity';
+import { S3Service } from '../analyzer/s3.service';
 
 @Injectable()
 export class ExamService {
@@ -33,6 +34,7 @@ export class ExamService {
     private readonly dataSource: DataSource,
     @InjectRepository(CheatingRecordEntity)
     private readonly cheatingRecordRepo: Repository<CheatingRecordEntity>,
+    private readonly s3Service: S3Service,
   ) {}
 
   private validateExam(exam: Exam): void {
@@ -87,11 +89,21 @@ export class ExamService {
     return dto;
   }
 
-  private toOneDto(
+  private async toOneDto(
     exam: Exam,
     userId: number,
     cheatingLogs: CheatingRecordEntity[],
-  ): ExamDetailResponseDto {
+  ): Promise<ExamDetailResponseDto> {
+    const cheatingLogsWithUrls = await Promise.all(
+      cheatingLogs.map(async (log) => ({
+        detectedAt: log.detectedAt,
+        reason: log.reason,
+        imageUrl: log.imageUrl
+          ? await this.s3Service.getPresignedUrl(log.imageUrl)
+          : undefined,
+      })),
+    );
+
     return {
       id: exam.id,
       title: exam.title,
@@ -100,10 +112,7 @@ export class ExamService {
       isCompleted:
         exam.examParticipants.find((p) => p.user.id === userId)?.isCompleted ??
         false,
-      cheatingLogs: cheatingLogs.map((log) => ({
-        detectedAt: log.detectedAt,
-        reason: log.reason,
-      })),
+      cheatingLogs: cheatingLogsWithUrls,
     };
   }
 
@@ -162,7 +171,7 @@ export class ExamService {
       },
     });
 
-    return this.toOneDto(exam, userId, cheatingLogs);
+    return await this.toOneDto(exam, userId, cheatingLogs);
   }
 
   async registerUser(
