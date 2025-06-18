@@ -33,4 +33,7 @@ export class CheatingRecordEntity {
 
   @UpdateDateColumn({ type: 'datetime', comment: '레코드 수정 시각' })
   updatedAt: Date;
+
+  @Column({ type: 'varchar', length: 255, comment: '사진 경로' })
+  imageUrl: string;
 }

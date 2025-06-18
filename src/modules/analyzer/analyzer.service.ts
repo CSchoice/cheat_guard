@@ -9,12 +9,14 @@ import { lastValueFrom } from 'rxjs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 import { CheatingRecordEntity } from './entities/cheating-record.entity';
+import { S3Service } from './s3.service';
 
 export interface AIResponse {
   status: string;
   message: string;
   confidence?: number;
   timestamp?: number;
+  image_base64?: string;
   [key: string]: unknown;
 }
 
@@ -47,6 +49,7 @@ export class AnalyzerService {
     private readonly http: HttpService,
     @InjectRepository(CheatingRecordEntity)
     private readonly cheatingRepo: Repository<CheatingRecordEntity>,
+    private readonly s3Service: S3Service,
     private readonly configService: ConfigService,
   ) {
     this.aiServerUrl = this.configService.get(
@@ -167,6 +170,46 @@ export class AnalyzerService {
       return;
     }
 
+    this.logger.debug('AI 응답 확인', {
+      ...logContext,
+      result,
+    });
+
+    const base64 = result.image_base64;
+    if (typeof base64 !== 'string') {
+      this.logger.error('image_base64 누락 또는 잘못된 형식', logContext);
+      throw new InternalServerErrorException('AI 응답에 image_base64 없음');
+    }
+
+    const s3Key = `cheating/${examId}/${userId}/${Date.now()}.jpg`;
+    this.logger.debug('S3 이미지 업로드 시작', {
+      ...logContext,
+      key: s3Key,
+      base64Length: base64.length,
+    });
+
+    let imageUrl: string;
+    try {
+      imageUrl = await this.s3Service.uploadBase64Image(
+        base64,
+        `cheating/${examId}/${userId}`,
+      );
+      this.logger.log('부정행위 이미지 업로드 성공', {
+        ...logContext,
+        imageUrl,
+      });
+    } catch (uploadError) {
+      this.logger.error('S3 이미지 업로드 실패', {
+        ...logContext,
+        error:
+          uploadError instanceof Error
+            ? uploadError.message
+            : String(uploadError),
+        stack: uploadError instanceof Error ? uploadError.stack : undefined,
+      });
+      throw new InternalServerErrorException('부정행위 이미지 업로드 실패');
+    }
+
     const { message = 'No message', confidence, timestamp } = result;
     const detectionTime = timestamp ? new Date(timestamp) : new Date();
 
@@ -185,6 +228,7 @@ export class AnalyzerService {
       reason: message,
       confidence,
       rawData: result,
+      imageUrl: imageUrl,
     };
 
     this.logger.warn('부정행위 감지됨', cheatingContext);

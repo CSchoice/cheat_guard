@@ -4,6 +4,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerController } from './analyzer.controller';
 import { CheatingRecordEntity } from './entities/cheating-record.entity';
+import { S3Service } from './s3.service';
 
 const AxiosModule: DynamicModule = HttpModule.register({
   baseURL: process.env.AI_SERVER_URL || 'http://localhost:5000',
@@ -13,7 +14,7 @@ const AxiosModule: DynamicModule = HttpModule.register({
 @Module({
   imports: [AxiosModule, TypeOrmModule.forFeature([CheatingRecordEntity])],
   controllers: [AnalyzerController],
-  providers: [AnalyzerService],
+  providers: [AnalyzerService, S3Service],
   exports: [AnalyzerService],
 })
 export class AnalyzerModule {}
