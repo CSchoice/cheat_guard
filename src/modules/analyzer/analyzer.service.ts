@@ -10,6 +10,33 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 import { CheatingRecordEntity } from './entities/cheating-record.entity';
 
+export interface AIResponse {
+  status: string;
+  message: string;
+  confidence?: number;
+  timestamp?: number;
+  [key: string]: unknown;
+}
+
+interface LogContext {
+  sessionId: string;
+  examId: number;
+  userId: number;
+  frameSize: number;
+  [key: string]: unknown;
+}
+
+type DriverError = {
+  code?: string;
+  constraint?: string;
+  detail?: string;
+  message?: string;
+};
+
+type QueryFailedErrorWithDriver = Error & {
+  driverError?: DriverError;
+};
+
 @Injectable()
 export class AnalyzerService {
   private readonly logger = new Logger(AnalyzerService.name);
@@ -18,7 +45,9 @@ export class AnalyzerService {
     private readonly http: HttpService,
     @InjectRepository(CheatingRecordEntity)
     private readonly cheatingRepo: Repository<CheatingRecordEntity>,
-  ) {}
+  ) {
+    this.logger.log('AnalyzerService 초기화 완료');
+  }
 
   /**
    * 외부 AI 서버에 프레임 전송 후, 부정행위 감지 시 DB에 저장
@@ -32,53 +61,159 @@ export class AnalyzerService {
     sessionId: string,
     examId: number,
     userId: number,
-  ): Promise<any> {
-    const imageBase64 = frame.toString('base64');
-    const payload = {
-      image_base64: imageBase64,
-      session_id: sessionId,
-      exam_id: examId,
-      user_id: userId,
-      timestamp: Date.now(),
+  ): Promise<AIResponse> {
+    if (!frame || !Buffer.isBuffer(frame)) {
+      throw new Error('유효하지 않은 프레임 데이터입니다.');
+    }
+    const startTime = Date.now();
+    const logContext: LogContext = {
+      sessionId,
+      examId,
+      userId,
+      frameSize: frame.length,
     };
 
-    let result: any;
+    this.logger.debug('프레임 분석 시작', logContext);
+
     try {
-      const resp$ = this.http.post<any>('http://localhost:8000/infer', payload);
-      const resp = await lastValueFrom(resp$);
-      result = resp.data;
+      const imageBase64 = frame.toString('base64');
+      const payload = {
+        image_base64: imageBase64,
+        session_id: sessionId,
+        exam_id: examId,
+        user_id: userId,
+        timestamp: startTime,
+      };
+
+      this.logger.debug('AI 서버로 분석 요청 전송', {
+        ...logContext,
+        payloadSize: JSON.stringify(payload).length,
+      });
+
+      const response = await lastValueFrom(
+        this.http.post<AIResponse>('http://localhost:8000/infer', payload, {
+          headers: {
+            'Content-Type': 'application/json',
+            exam_id: examId.toString(),
+          },
+        }),
+      );
+
+      if (!response?.data) {
+        throw new Error('AI 서버로부터 유효한 응답을 받지 못했습니다.');
+      }
+
+      const result = response.data;
+      const processingTime = Date.now() - startTime;
+
+      this.logger.log('AI 분석 완료', {
+        ...logContext,
+        processingTime: `${processingTime}ms`,
+        resultStatus: result.status,
+      });
+
+      if (result.status === 'cheating') {
+        await this.handleCheatingDetection({
+          result,
+          sessionId,
+          examId,
+          userId,
+          logContext,
+        });
+      }
+
+      return result;
     } catch (error) {
-      this.logger.error('AI 서버 프레임 분석 실패', error);
+      const errorContext = {
+        ...logContext,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      };
+
+      this.logger.error('프레임 분석 중 오류 발생', errorContext);
       throw new InternalServerErrorException('AI 서버 프레임 분석 실패');
     }
+  }
 
-    if (result?.status === 'cheating') {
-      // 엔티티 필드에 맞춰 직접 값만 할당
-      const record = this.cheatingRepo.create({
-        sessionId,
-        examId,
-        userId,
-        detectedAt: new Date(result.timestamp || Date.now()),
-        reason: result.message,
-        rawData: result,
+  /**
+   * 부정행위 감지 시 처리
+   */
+  private async handleCheatingDetection({
+    result,
+    sessionId,
+    examId,
+    userId,
+    logContext,
+  }: {
+    result: AIResponse;
+    sessionId: string;
+    examId: number;
+    userId: number;
+    logContext: LogContext;
+  }): Promise<void> {
+    if (!result || typeof result !== 'object' || !('status' in result)) {
+      this.logger.error('유효하지 않은 AI 응답 형식', {
+        result,
+        ...logContext,
       });
-      try {
-        await this.cheatingRepo.save(record);
-        this.logger.log(
-          `부정행위 기록 저장: exam=${examId} user=${userId} session=${sessionId}`,
-        );
-      } catch (error) {
-        if (error instanceof QueryFailedError) {
-          this.logger.error('DB 제약조건 오류로 기록 저장 실패', error);
-          throw new ConflictException(
-            '부정행위 기록이 중복되었거나 유효하지 않습니다.',
-          );
-        }
-        this.logger.error('부정행위 기록 저장 실패', error);
-        throw new InternalServerErrorException('부정행위 기록 저장 실패');
-      }
+      return;
     }
 
-    return result;
+    const { message = 'No message', confidence, timestamp } = result;
+    const detectionTime = timestamp ? new Date(timestamp) : new Date();
+
+    const cheatingContext = {
+      ...logContext,
+      detectionTime: detectionTime.toISOString(),
+      reason: message,
+      confidence,
+    };
+
+    const cheatingData = {
+      sessionId,
+      examId,
+      userId,
+      detectedAt: detectionTime,
+      reason: message,
+      confidence,
+      rawData: result,
+    };
+
+    this.logger.warn('부정행위 감지됨', cheatingContext);
+
+    try {
+      const record = this.cheatingRepo.create(
+        cheatingData as unknown as CheatingRecordEntity,
+      );
+      await this.cheatingRepo.save(record);
+
+      this.logger.log('부정행위 기록 저장 성공', {
+        ...cheatingContext,
+        recordId: record.id,
+      });
+    } catch (error) {
+      const typedError = error as unknown as QueryFailedErrorWithDriver;
+      const errorDetails = typedError.driverError
+        ? {
+            code: typedError.driverError.code,
+            constraint: typedError.driverError.constraint,
+            detail: typedError.driverError.detail,
+            message: typedError.driverError.message,
+          }
+        : { message: error instanceof Error ? error.message : 'Unknown error' };
+
+      this.logger.error('부정행위 기록 저장 실패', {
+        ...cheatingContext,
+        ...errorDetails,
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+
+      if (error instanceof QueryFailedError) {
+        throw new ConflictException(
+          '부정행위 기록이 중복되었거나 유효하지 않습니다.',
+        );
+      }
+      throw new InternalServerErrorException('부정행위 기록 저장 실패');
+    }
   }
 }

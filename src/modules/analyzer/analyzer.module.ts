@@ -1,7 +1,9 @@
 import { Module, DynamicModule } from '@nestjs/common';
 import { HttpModule } from '@nestjs/axios';
+import { TypeOrmModule } from '@nestjs/typeorm';
 import { AnalyzerService } from './analyzer.service';
 import { AnalyzerController } from './analyzer.controller';
+import { CheatingRecordEntity } from './entities/cheating-record.entity';
 
 const AxiosModule: DynamicModule = HttpModule.register({
   baseURL: process.env.AI_SERVER_URL || 'http://localhost:5000',
@@ -9,7 +11,7 @@ const AxiosModule: DynamicModule = HttpModule.register({
 });
 
 @Module({
-  imports: [AxiosModule],
+  imports: [AxiosModule, TypeOrmModule.forFeature([CheatingRecordEntity])],
   controllers: [AnalyzerController],
   providers: [AnalyzerService],
   exports: [AnalyzerService],

@@ -22,22 +22,15 @@ export class CheatingRecordEntity {
   @Column({ type: 'int', comment: '사용자 ID' })
   userId: number;
 
-  @Column({ type: 'timestamptz', comment: '부정행위 발생 시간' })
+  @Column({ type: 'datetime', comment: '부정행위 발생 시간' })
   detectedAt: Date;
 
   @Column({ type: 'varchar', length: 255, comment: '부정행위 사유 메시지' })
   reason: string;
 
-  @Column({
-    type: 'jsonb',
-    nullable: true,
-    comment: 'AI 서버 원본 응답 데이터',
-  })
-  rawData: any;
-
-  @CreateDateColumn({ type: 'timestamptz', comment: '레코드 생성 시각' })
+  @CreateDateColumn({ type: 'datetime', comment: '레코드 생성 시각' })
   createdAt: Date;
 
-  @UpdateDateColumn({ type: 'timestamptz', comment: '레코드 수정 시각' })
+  @UpdateDateColumn({ type: 'datetime', comment: '레코드 수정 시각' })
   updatedAt: Date;
 }

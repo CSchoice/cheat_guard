@@ -67,7 +67,17 @@ export class AnalyzerController {
     }
 
     try {
-      const result = await this.analyzerService.analyzeFrame(file.buffer);
+      // TODO: Replace with actual session ID and user ID from authentication
+      const sessionId = req.sessionID || 'test-session';
+      const examId = 1; // TODO: Get exam ID from request or configuration
+      const userId = req.user?.id || 1; // Get user ID from authenticated user
+
+      const result = await this.analyzerService.analyzeFrame(
+        file.buffer,
+        sessionId,
+        examId,
+        userId,
+      );
       return { status: 'success', data: result };
     } catch (error) {
       throw new HttpException(
