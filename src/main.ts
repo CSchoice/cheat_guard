@@ -13,24 +13,42 @@ import * as morgan from 'morgan';
 import type { RequestHandler } from 'express';
 
 async function bootstrap() {
+  // 1) Logger 레벨도 환경변수로 제어
+  const loggerLevels = process.env.LOGGER_LEVELS
+    ? (process.env.LOGGER_LEVELS.split(',') as any)
+    : ['error', 'warn', 'log'];
+
   const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log'],
+    logger: loggerLevels,
   });
 
-  // 요청 로깅(morgan)
-  const morganMiddleware = morgan('dev') as RequestHandler;
+  // 2) Morgan 포맷도 환경변수로
+  const morganFormat = process.env.MORGAN_FORMAT || 'dev';
+  const morganMiddleware = morgan(morganFormat) as RequestHandler;
   app.use(morganMiddleware);
 
-  // 1) CORS 활성화 및 글로벌 프리픽스 설정
+  // 3) CORS 설정 (이미 환경변수 사용 중)
+  const corsOrigins = process.env.CORS_ORIGINS
+    ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
+    : true;
   app.enableCors({
-    origin: true, // 모든 출처 허용
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true, // 인증 정보 허용
-    allowedHeaders: 'Content-Type, Accept, Authorization',
+    origin: corsOrigins,
+    methods:
+      process.env.CORS_METHODS || 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    credentials: process.env.CORS_CREDENTIALS === 'true',
+    allowedHeaders:
+      process.env.CORS_ALLOWED_HEADERS || 'Content-Type, Accept, Authorization',
+    exposedHeaders: process.env.CORS_EXPOSED_HEADERS || '',
+    maxAge: process.env.CORS_MAX_AGE
+      ? parseInt(process.env.CORS_MAX_AGE, 10)
+      : 600,
   });
-  app.setGlobalPrefix('api');
 
-  // 2) ValidationPipe & ExceptionFactory 설정
+  // 4) 글로벌 prefix
+  const globalPrefix = process.env.GLOBAL_PREFIX || 'api';
+  app.setGlobalPrefix(globalPrefix);
+
+  // 5) ValidationPipe 설정 (하드코딩된 메시지도 환경변수로 뺄 수 있지만 예제는 그대로)
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -50,29 +68,52 @@ async function bootstrap() {
     }),
   );
 
-  // 3) 전역 예외 필터 등록
+  // 6) 전역 예외 필터
   app.useGlobalFilters(new HttpErrorFilter());
 
-  // 4) Swagger 설정
-  const config = new DocumentBuilder()
-    .setTitle('Cheat Guard API')
-    .setDescription('온라인 시험 부정행위 감지 시스템 API 문서')
-    .setVersion('1.0')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'access-token',
-    )
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api/docs', app, document, {
-    swaggerOptions: { persistAuthorization: true },
-  });
+  // 7) Swagger 설정
+  if (process.env.SWAGGER_ENABLED !== 'false') {
+    const swaggerPath = process.env.SWAGGER_PATH || `${globalPrefix}/docs`;
+    const swaggerTitle = process.env.SWAGGER_TITLE || 'Cheat Guard API';
+    const swaggerDesc =
+      process.env.SWAGGER_DESCRIPTION ||
+      '온라인 시험 부정행위 감지 시스템 API 문서';
+    const swaggerVersion = process.env.SWAGGER_VERSION || '1.0';
+    const bearerName = process.env.SWAGGER_BEARER_NAME || 'access-token';
 
-  // 5) 애플리케이션 실행
-  const port = process.env.PORT ?? 3000;
+    const config = new DocumentBuilder()
+      .setTitle(swaggerTitle)
+      .setDescription(swaggerDesc)
+      .setVersion(swaggerVersion)
+      .addBearerAuth(
+        {
+          type: 'http',
+          scheme: 'bearer',
+          bearerFormat: 'JWT',
+        },
+        bearerName,
+      )
+      .build();
+
+    const document = SwaggerModule.createDocument(app, config);
+    SwaggerModule.setup(swaggerPath, app, document, {
+      swaggerOptions: {
+        persistAuthorization: process.env.SWAGGER_PERSIST_AUTH === 'true',
+      },
+    });
+  }
+
+  // 8) 포트도 환경변수로
+  const port = parseInt(process.env.PORT || '3000', 10);
   await app.listen(port);
-  console.log(`🚀 Server running at http://localhost:${port}/api`);
-  console.log(`🚀 Swagger available at http://localhost:${port}/api/docs`);
+  console.log(`🚀 Server running at http://localhost:${port}/${globalPrefix}`);
+  if (process.env.SWAGGER_ENABLED !== 'false') {
+    console.log(
+      `🚀 Swagger available at http://localhost:${port}/${
+        process.env.SWAGGER_PATH || `${globalPrefix}/docs`
+      }`,
+    );
+  }
 }
 
 void bootstrap();

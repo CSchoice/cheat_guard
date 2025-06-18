@@ -4,6 +4,7 @@ import {
   InternalServerErrorException,
   ConflictException,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { HttpService } from '@nestjs/axios';
 import { lastValueFrom } from 'rxjs';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -41,12 +42,20 @@ type QueryFailedErrorWithDriver = Error & {
 export class AnalyzerService {
   private readonly logger = new Logger(AnalyzerService.name);
 
+  private readonly aiServerUrl: string;
+
   constructor(
     private readonly http: HttpService,
     @InjectRepository(CheatingRecordEntity)
     private readonly cheatingRepo: Repository<CheatingRecordEntity>,
+    private readonly configService: ConfigService,
   ) {
+    this.aiServerUrl = this.configService.get(
+      'aiServerUrl',
+      'http://localhost:5000',
+    );
     this.logger.log('AnalyzerService 초기화 완료');
+    this.logger.log(`AI 서버 URL: ${this.aiServerUrl}`);
   }
 
   /**
@@ -91,7 +100,7 @@ export class AnalyzerService {
       });
 
       const response = await lastValueFrom(
-        this.http.post<AIResponse>('http://localhost:8000/infer', payload, {
+        this.http.post<AIResponse>(`${this.aiServerUrl}/infer`, payload, {
           headers: {
             'Content-Type': 'application/json',
             exam_id: examId.toString(),

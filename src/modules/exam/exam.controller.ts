@@ -118,7 +118,7 @@ export class ExamController {
     return this.examService.registerUser(id, { userId });
   }
 
-  @ApiOperation({ summary: '시험 등록 취소'})
+  @ApiOperation({ summary: '시험 등록 취소' })
   @ApiResponse({
     status: 200,
     description: '시험 등록 취소 후 시험 반환',

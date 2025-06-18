@@ -5,6 +5,7 @@ import {
   InternalServerErrorException,
   Logger,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 import { Exam, ExamStatus } from './entities/exam.entity';
@@ -22,6 +23,7 @@ export class ExamService {
   constructor(
     @InjectRepository(Exam) private readonly examRepo: Repository<Exam>,
     private readonly usersService: UsersService,
+    private readonly configService: ConfigService,
   ) {}
 
   /** Entity → DTO 변환 */
@@ -246,7 +248,8 @@ export class ExamService {
     // 5) sessionId, fastApiUrl 생성 (필요하다면)
     const timestamp = Date.now();
     const sessionId = `session_${examId}_${userId}_${timestamp}`;
-    const fastApiUrl = process.env.FAST_API_URL || 'http://localhost:8000';
+    const fastApiUrl =
+      this.configService.get<string>('fastApiUrl') || 'http://localhost:8000';
 
     return { sessionId, fastApiUrl };
   }
