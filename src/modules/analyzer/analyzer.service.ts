@@ -54,7 +54,7 @@ export class AnalyzerService {
   ) {
     this.aiServerUrl = this.configService.get(
       'aiServerUrl',
-      'http://localhost:5000',
+      'http://localhost:8000',
     );
     this.logger.log('AnalyzerService 초기화 완료');
     this.logger.log(`AI 서버 URL: ${this.aiServerUrl}`);
@@ -140,7 +140,7 @@ export class AnalyzerService {
         error: error instanceof Error ? error.message : 'Unknown error',
         stack: error instanceof Error ? error.stack : undefined,
       };
-
+      this.logger.error(`${this.aiServerUrl}/infer`);
       this.logger.error('프레임 분석 중 오류 발생', errorContext);
       throw new InternalServerErrorException('AI 서버 프레임 분석 실패');
     }
@@ -149,7 +149,7 @@ export class AnalyzerService {
   /**
    * 부정행위 감지 시 처리
    */
-  private async handleCheatingDetection({
+  private async handleCheatinngDetection({
     result,
     sessionId,
     examId,

@@ -27,7 +27,7 @@ async function bootstrap() {
   const morganMiddleware = morgan(morganFormat) as RequestHandler;
   app.use(morganMiddleware);
 
-  // 3) CORS 설정 (이미 환경변수 사용 중)
+  // 3) CORS 설정
   const corsOrigins = process.env.CORS_ORIGINS
     ? process.env.CORS_ORIGINS.split(',').map((o) => o.trim())
     : true;
@@ -48,7 +48,7 @@ async function bootstrap() {
   const globalPrefix = process.env.GLOBAL_PREFIX || 'api';
   app.setGlobalPrefix(globalPrefix);
 
-  // 5) ValidationPipe 설정 (하드코딩된 메시지도 환경변수로 뺄 수 있지만 예제는 그대로)
+  // 5) ValidationPipe 설정
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,

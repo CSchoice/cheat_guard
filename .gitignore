@@ -59,3 +59,4 @@ docker-compose.override.yml
 # Puppeteer 캐시(옵션)
 puppeteer/
 패키지.md
+.dockerignore
