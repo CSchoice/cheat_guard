@@ -5,6 +5,7 @@ import { Repository, DataSource } from 'typeorm';
 import { QueryFailedError } from 'typeorm';
 import {
   ConflictException,
+  ExamNotFoundException,
   ExamValidationException,
   InternalServerErrorException,
   UserNotFoundException,
@@ -158,7 +159,7 @@ export class ExamService {
     });
 
     if (!exam) {
-      throw new UserNotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
+      throw new ExamNotFoundException(id);
     }
 
     const cheatingLogs = await this.cheatingRecordRepo.find({
@@ -184,7 +185,7 @@ export class ExamService {
         relations: ['examParticipants', 'examParticipants.user'],
       });
       if (!exam) {
-        throw new UserNotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
+        throw new ExamNotFoundException(id);
       }
 
       if (exam.examParticipants.some((ep) => ep.user.id === dto.userId)) {
@@ -228,7 +229,7 @@ export class ExamService {
       relations: ['examParticipants', 'examParticipants.user'],
     });
     if (!exam) {
-      throw new UserNotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
+      throw new ExamNotFoundException(id);
     }
     return this.toDto(exam, userId);
   }
@@ -239,7 +240,7 @@ export class ExamService {
       relations: ['examParticipants', 'examParticipants.user'],
     });
     if (!exam) {
-      throw new UserNotFoundException(`ID ${id} 번 시험을 찾을 수 없습니다.`);
+      throw new ExamNotFoundException(id);
     }
     return exam.examParticipants.map((ep) => ({
       id: ep.user.id,
@@ -255,7 +256,7 @@ export class ExamService {
       where: { id: examId },
       relations: ['examParticipants', 'examParticipants.user'],
     });
-    if (!exam) throw new UserNotFoundException('시험을 찾을 수 없습니다.');
+    if (!exam) throw new ExamNotFoundException(examId);
 
     if (!exam.examParticipants.some((p) => p.user.id === userId)) {
       throw new ConflictException('시험에 참가하지 않은 사용자입니다.');
