@@ -5,8 +5,8 @@ CheatGuard는 온라인 시험 환경에서 부정행위를 종합적으로 감�
 ---
 ## 배포 경로
 
-* **데모**: [CheatGuard 데모](https://cheat-guard-front-2nb7l10a3-chois-projects-115f9e6c.vercel.app/)
-(테스트 계정: id: `test1234` / password: `test1234!`)
+* **데모**: [CheatGuard 데모](https://www.cheatguard.site/)
+(테스트 계정: id: `test12345` / password: `test12345!`)
 * **API 문서**: [Swagger](https://backend.cheatguard.site/api/docs)
 * **백엔드**: [백엔드 Git](https://github.com/CSchoice/cheat_guard)
 * **프론트엔드**: [프론트엔드 Git](https://github.com/CSchoice/cheat_guard_front)
