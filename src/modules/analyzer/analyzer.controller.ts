@@ -55,10 +55,7 @@ export class AnalyzerController {
   @Roles('admin', 'student')
   @Post('frame')
   @UseInterceptors(FileInterceptor('frame'))
-  async upload(
-    @UploadedFile() file: Express.Multer.File,
-    @Req() req: any,
-  ) {
+  async upload(@UploadedFile() file: Express.Multer.File, @Req() req: any) {
     console.log('>>> controller req.user =', req.user);
 
     if (!file) {
