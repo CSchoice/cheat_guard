@@ -7,7 +7,12 @@ node_modules/
 
 # dotenv 환경변수 파일
 .env
-.env.*.local
+.env.*
+!.env.example
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
 
 # 로그
 logs/
@@ -60,3 +65,5 @@ docker-compose.override.yml
 puppeteer/
 패키지.md
 .dockerignore
+.env.example
+SETUP.md
