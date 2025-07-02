@@ -22,7 +22,6 @@ import { dataSourceOptions } from './config/data-source';
 
 @Module({
   imports: [
-    // Load configuration from .env file and config files
     ConfigModule.forRoot({
       isGlobal: true,
       envFilePath: `.env.${process.env.NODE_ENV || 'development'}`,
@@ -30,21 +29,19 @@ import { dataSourceOptions } from './config/data-source';
       cache: true,
     }),
 
-    // Database configuration
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         ...dataSourceOptions,
         autoLoadEntities: true,
-        synchronize: configService.get('NODE_ENV') === 'development', // Only in development
+        // 개발환경일때만 synchronize
+        synchronize: configService.get('NODE_ENV') === 'development',
       }),
       inject: [ConfigService],
     }),
 
-    // Schedule tasks
     ScheduleModule.forRoot(),
 
-    // Application modules
     UsersModule,
     AuthModule,
     ExamModule,
