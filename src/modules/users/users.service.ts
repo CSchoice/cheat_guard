@@ -5,8 +5,12 @@ import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/response/user-response.dto';
 import {
-  ConflictException,
+  NotFoundException,
   InternalServerErrorException,
+  BadRequestException,
+  ConflictException,
+} from '@nestjs/common';
+import {
   UserNotFoundException,
 } from '../../common/exceptions/business.exception';
 
@@ -23,9 +27,9 @@ export class UsersService {
       const users = await this.repo.find();
       return users.map((u) => ({ id: u.id, nickname: u.nickname }));
     } catch {
-      throw new InternalServerErrorException(
-        '사용자 목록 조회 중 오류가 발생했습니다.',
-      );
+      throw new InternalServerErrorException({
+        message: '사용자 목록 조회 중 오류가 발생했습니다.',
+      });
     }
   }
 
@@ -41,9 +45,9 @@ export class UsersService {
       if (error instanceof UserNotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        '사용자 조회 중 오류가 발생했습니다.',
-      );
+      throw new InternalServerErrorException({
+        message: '사용자 조회 중 오류가 발생했습니다.',
+      });
     }
   }
 
@@ -52,6 +56,54 @@ export class UsersService {
     nickname: string,
     plainPassword: string,
   ): Promise<UserResponseDto> {
+    if (!nickname || !plainPassword) {
+      throw new BadRequestException({
+        message: '닉네임과 비밀번호는 필수입니다.',
+      });
+    }
+
+    if (nickname.length < 2 || nickname.length > 50) {
+      throw new BadRequestException({
+        message: '닉네임은 2자 이상 50자 이하이어야 합니다.',
+      });
+    }
+
+    if (!/^[a-zA-Z0-9ㄱ-ㅎ가-힣\s]+$/.test(nickname)) {
+      throw new BadRequestException({
+        message: '닉네임은 한글, 영어, 숫자, 공백만 포함할 수 있습니다.',
+      });
+    }
+
+    if (nickname.includes('  ')) {
+      throw new BadRequestException({
+        message: '닉네임에 연속된 공백이 포함될 수 없습니다.',
+      });
+    }
+
+    if (nickname.trim() === '') {
+      throw new BadRequestException({
+        message: '닉네임은 공백만 포함할 수 없습니다.',
+      });
+    }
+
+    if (nickname.startsWith(' ') || nickname.endsWith(' ')) {
+      throw new BadRequestException({
+        message: '닉네임은 양쪽 끝에 공백을 포함할 수 없습니다.',
+      });
+    }
+
+    if (nickname.includes('\n') || nickname.includes('\r')) {
+      throw new BadRequestException({
+        message: '닉네임에 줄바꿈 문자가 포함될 수 없습니다.',
+      });
+    }
+
+    if (plainPassword.length < 6) {
+      throw new BadRequestException({
+        message: '비밀번호는 최소 6자 이상이어야 합니다.',
+      });
+    }
+
     const exists = await this.repo.findOne({ where: { nickname } });
     if (exists) {
       throw new ConflictException('이미 사용 중인 닉네임입니다.');
@@ -63,10 +115,10 @@ export class UsersService {
       const user = this.repo.create({ nickname, password });
       const saved = await this.repo.save(user);
       return { id: saved.id, nickname: saved.nickname };
-    } catch {
-      throw new InternalServerErrorException(
-        '사용자 생성 중 오류가 발생했습니다.',
-      );
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: '사용자 생성 중 오류가 발생했습니다.',
+      });
     }
   }
 
@@ -82,9 +134,9 @@ export class UsersService {
       if (error instanceof UserNotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        '사용자 조회 중 오류가 발생했습니다.',
-      );
+      throw new InternalServerErrorException({
+        message: '사용자 조회 중 오류가 발생했습니다.',
+      });
     }
   }
 
@@ -106,9 +158,9 @@ export class UsersService {
       if (error instanceof UserNotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(
-        '사용자 조회 중 오류가 발생했습니다.',
-      );
+      throw new InternalServerErrorException({
+        message: '사용자 조회 중 오류가 발생했습니다.',
+      });
     }
   }
 }
