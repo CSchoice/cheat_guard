@@ -54,7 +54,10 @@ export class AuthService {
       if (err instanceof NotFoundException) {
         throw new UnauthorizedException('아이디 또는 비밀번호가 올바르지 않습니다.');
       }
-      throw new InternalServerErrorException('사용자 조회 중 오류가 발생했습니다.');
+      throw new InternalServerErrorException({
+        message: '사용자 조회 중 오류가 발생했습니다.',
+        context: { error: err instanceof Error ? err.message : 'Unknown error' }
+      });
     }
 
     try {
@@ -93,7 +96,10 @@ export class AuthService {
       };
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'JWT 토큰 생성 중 오류가 발생했습니다.';
-      throw new InternalServerErrorException(errorMessage);
+      throw new InternalServerErrorException({
+        message: errorMessage,
+        context: { error: error instanceof Error ? error.message : 'Unknown error' }
+      });
     }
   }
 }

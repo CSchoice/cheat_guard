@@ -1,5 +1,4 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import {
@@ -20,6 +19,7 @@ import { ExamParticipant } from './entities/exam-participant.entity';
 import { ExamDetailResponseDto } from './dto/response/exam-detail-response.dto';
 import { CheatingRecordEntity } from '../analyzer/entities/cheating-record.entity';
 import { S3Service } from '../analyzer/s3.service';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class ExamService {
@@ -163,10 +163,7 @@ export class ExamService {
 
     const exists = await this.examRepo.findOne({ where: { title: dto.title } });
     if (exists) {
-      throw new ConflictException('시험', {
-        title: dto.title,
-        message: '이미 같은 이름의 시험이 존재합니다.',
-      });
+      throw new ConflictException('시험', { title: dto.title });
     }
 
     const exam = this.examRepo.create({
