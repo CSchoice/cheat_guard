@@ -1,11 +1,5 @@
-import { Injectable, Logger } from '@nestjs/common';
-import {
-  InternalServerErrorException,
-  ConflictException,
-} from '../../common/exceptions/business.exception';
+import { Injectable, Logger, BadRequestException, InternalServerErrorException, ConflictException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { HttpService } from '@nestjs/axios';
-import { lastValueFrom } from 'rxjs';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
 import { CheatingRecordEntity } from './entities/cheating-record.entity';
@@ -13,7 +7,7 @@ import { S3Service } from './s3.service';
 
 export interface AIResponse {
   status: string;
-  message: string;
+  message?: string;
   confidence?: number;
   timestamp?: number;
   image_base64?: string;
@@ -46,7 +40,6 @@ export class AnalyzerService {
   private readonly aiServerUrl: string;
 
   constructor(
-    private readonly http: HttpService,
     @InjectRepository(CheatingRecordEntity)
     private readonly cheatingRepo: Repository<CheatingRecordEntity>,
     private readonly s3Service: S3Service,
@@ -74,8 +67,29 @@ export class AnalyzerService {
     userId: number,
   ): Promise<AIResponse> {
     if (!frame || !Buffer.isBuffer(frame)) {
-      throw new ConflictException('유효하지 않은 프레임 데이터입니다.');
+      throw new BadRequestException({
+        message: '프레임 데이터가 유효하지 않습니다.',
+      });
     }
+
+    if (!sessionId || typeof sessionId !== 'string') {
+      throw new BadRequestException({
+        message: '세션 ID가 유효하지 않습니다.',
+      });
+    }
+
+    if (!examId || typeof examId !== 'number') {
+      throw new BadRequestException({
+        message: '시험 ID가 유효하지 않습니다.',
+      });
+    }
+
+    if (!userId || typeof userId !== 'number') {
+      throw new BadRequestException({
+        message: '사용자 ID가 유효하지 않습니다.',
+      });
+    }
+
     const startTime = Date.now();
     const logContext: LogContext = {
       sessionId,
@@ -101,48 +115,82 @@ export class AnalyzerService {
         payloadSize: JSON.stringify(payload).length,
       });
 
-      const response = await lastValueFrom(
-        this.http.post<AIResponse>(`${this.aiServerUrl}/infer`, payload, {
-          headers: {
-            'Content-Type': 'application/json',
-            exam_id: examId.toString(),
-          },
-        }),
-      );
-
-      if (!response?.data) {
-        throw new Error('AI 서버로부터 유효한 응답을 받지 못했습니다.');
-      }
-
-      const result = response.data;
-      const processingTime = Date.now() - startTime;
-
-      this.logger.log('AI 분석 완료', {
-        ...logContext,
-        processingTime: `${processingTime}ms`,
-        resultStatus: result.status,
+      const response = await fetch(`${this.aiServerUrl}/analyze`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
       });
 
-      if (result.status === 'cheating') {
-        await this.handleCheatingDetection({
-          result,
-          sessionId,
-          examId,
-          userId,
-          logContext,
+      if (!response.ok) {
+        throw new InternalServerErrorException({
+          message: `AI 서버 응답 실패: ${response.status} ${response.statusText}`,
         });
       }
 
-      return result;
-    } catch (error) {
-      const errorContext = {
+      const aiResponse = await response.json();
+
+      if (!aiResponse || typeof aiResponse !== 'object') {
+        throw new InternalServerErrorException({
+          message: 'AI 서버 응답이 유효하지 않습니다.',
+        });
+      }
+
+      if (aiResponse.status === 'error') {
+        throw new InternalServerErrorException({
+          message: aiResponse.message || 'AI 서버에서 에러가 발생했습니다.',
+        });
+      }
+
+      if (aiResponse.status === 'cheating_detected') {
+        const cheatingRecord = this.cheatingRepo.create({
+          sessionId,
+          examId,
+          userId,
+          detectedAt: new Date(startTime),
+          reason: `부정행위 감지 (신뢰도: ${aiResponse.confidence || 'N/A'})`,
+          imageUrl: await this.s3Service.uploadBase64Image(
+            aiResponse.image_base64,
+            `cheating/${examId}/${userId}`,
+          ),
+        });
+
+        try {
+          await this.cheatingRepo.save(cheatingRecord);
+          this.logger.debug('부정행위 기록 저장 완료', logContext);
+        } catch (error) {
+          const queryError = error as QueryFailedErrorWithDriver;
+          this.logger.error('부정행위 기록 저장 중 오류 발생', {
+            ...logContext,
+            error: queryError.driverError,
+          });
+          throw new InternalServerErrorException({
+            message: '부정행위 기록 저장 중 오류가 발생했습니다.',
+          });
+        }
+      }
+
+      this.logger.debug('프레임 분석 완료', {
         ...logContext,
-        error: error instanceof Error ? error.message : 'Unknown error',
-        stack: error instanceof Error ? error.stack : undefined,
-      };
-      this.logger.error(`${this.aiServerUrl}/infer`);
-      this.logger.error('프레임 분석 중 오류 발생', errorContext);
-      throw new InternalServerErrorException('AI 서버 프레임 분석 실패');
+        processingTime: Date.now() - startTime,
+      });
+      return aiResponse;
+    } catch (error) {
+      this.logger.error('프레임 분석 중 오류 발생', {
+        ...logContext,
+        error: error.message,
+      });
+
+      if (error instanceof Error) {
+        throw new InternalServerErrorException({
+          message: error.message,
+        });
+      }
+
+      throw new InternalServerErrorException({
+        message: '프레임 분석 중 오류가 발생했습니다.',
+      });
     }
   }
 
