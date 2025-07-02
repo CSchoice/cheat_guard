@@ -35,7 +35,7 @@ export class UsersController {
     isArray: true,
   })
   @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles('student')
+  @Roles('admin')
   @Get()
   async getAll(): Promise<UserResponseDto[]> {
     return await this.usersService.findAll();
