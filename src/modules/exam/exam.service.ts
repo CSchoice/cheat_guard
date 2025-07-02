@@ -1,8 +1,7 @@
-import { Injectable, Logger, BadRequestException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
-import { QueryFailedError } from 'typeorm';
+import { Repository, DataSource, QueryFailedError } from 'typeorm';
 import {
   ConflictException,
   ExamNotFoundException,
@@ -40,61 +39,71 @@ export class ExamService {
 
   private validateExam(exam: Exam): void {
     if (!exam) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'exam',
         message: '시험 정보가 유효하지 않습니다.',
       });
     }
 
     if (!exam.title) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목은 필수입니다.',
       });
     }
 
     if (!exam.deadlineAt) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'deadlineAt',
         message: '시험 마감 시간은 필수입니다.',
       });
     }
 
     if (exam.deadlineAt <= new Date()) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'deadlineAt',
         message: '시험 마감 시간은 현재 시간 이후여야 합니다.',
       });
     }
 
     if (exam.title.length < 2 || exam.title.length > 50) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목은 2자 이상 50자 이하이어야 합니다.',
       });
     }
 
     if (!/^[a-zA-Z0-9ㄱ-ㅎ가-힣\s]+$/.test(exam.title)) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목은 한글, 영어, 숫자, 공백만 포함할 수 있습니다.',
       });
     }
 
     if (exam.title.includes('  ')) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목에 연속된 공백이 포함될 수 없습니다.',
       });
     }
 
     if (exam.title.trim() === '') {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목은 공백만 포함할 수 없습니다.',
       });
     }
 
     if (exam.title.startsWith(' ') || exam.title.endsWith(' ')) {
       throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목은 양쪽 끝에 공백을 포함할 수 없습니다.',
       });
     }
 
     if (exam.title.includes('\n') || exam.title.includes('\r')) {
       throw new ExamValidationException({
+        field: 'title',
         message: '시험 제목에 줄바꿈 문자가 포함될 수 없습니다.',
       });
     }
@@ -146,14 +155,16 @@ export class ExamService {
     userId: number,
   ): Promise<ExamResponseDto> {
     if (!dto || !userId) {
-      throw new BadRequestException({
+      throw new ExamValidationException({
+        field: 'exam',
         message: '시험 생성 정보가 부족합니다.',
       });
     }
 
     const exists = await this.examRepo.findOne({ where: { title: dto.title } });
     if (exists) {
-      throw new ConflictException({
+      throw new ConflictException('시험', {
+        title: dto.title,
         message: '이미 같은 이름의 시험이 존재합니다.',
       });
     }

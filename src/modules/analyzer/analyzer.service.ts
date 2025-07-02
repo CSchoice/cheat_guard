@@ -1,4 +1,9 @@
-import { Injectable, Logger, BadRequestException, InternalServerErrorException, ConflictException } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
+import {
+  ValidationException,
+  InternalServerErrorException,
+  ConflictException,
+} from '../../common/exceptions/business.exception';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, QueryFailedError } from 'typeorm';
@@ -67,25 +72,29 @@ export class AnalyzerService {
     userId: number,
   ): Promise<AIResponse> {
     if (!frame || !Buffer.isBuffer(frame)) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'frame',
         message: '프레임 데이터가 유효하지 않습니다.',
       });
     }
 
     if (!sessionId || typeof sessionId !== 'string') {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'sessionId',
         message: '세션 ID가 유효하지 않습니다.',
       });
     }
 
     if (!examId || typeof examId !== 'number') {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'examId',
         message: '시험 ID가 유효하지 않습니다.',
       });
     }
 
     if (!userId || typeof userId !== 'number') {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'userId',
         message: '사용자 ID가 유효하지 않습니다.',
       });
     }
@@ -226,7 +235,10 @@ export class AnalyzerService {
     const base64 = result.image_base64;
     if (typeof base64 !== 'string') {
       this.logger.error('image_base64 누락 또는 잘못된 형식', logContext);
-      throw new InternalServerErrorException('AI 응답에 image_base64 없음');
+      throw new InternalServerErrorException({
+        message: 'AI 응답에 image_base64가 없거나 잘못된 형식입니다.',
+        context: logContext
+      });
     }
 
     const s3Key = `cheating/${examId}/${userId}/${Date.now()}.jpg`;
@@ -249,13 +261,14 @@ export class AnalyzerService {
     } catch (uploadError) {
       this.logger.error('S3 이미지 업로드 실패', {
         ...logContext,
-        error:
-          uploadError instanceof Error
-            ? uploadError.message
-            : String(uploadError),
+        error: uploadError instanceof Error ? uploadError.message : String(uploadError),
         stack: uploadError instanceof Error ? uploadError.stack : undefined,
       });
-      throw new InternalServerErrorException('부정행위 이미지 업로드 실패');
+      throw new InternalServerErrorException({
+        message: 'S3 이미지 업로드에 실패했습니다.',
+        error: uploadError instanceof Error ? uploadError.message : 'Unknown error',
+        context: logContext
+      });
     }
 
     const { message = 'No message', confidence, timestamp } = result;
@@ -305,7 +318,7 @@ export class AnalyzerService {
       this.logger.error('부정행위 기록 저장 실패', {
         ...cheatingContext,
         ...errorDetails,
-        stack: error instanceof Error ? error.stack : undefined,
+        context: logContext
       });
 
       if (error instanceof QueryFailedError) {
@@ -313,7 +326,11 @@ export class AnalyzerService {
           '부정행위 기록이 중복되었거나 유효하지 않습니다.',
         );
       }
-      throw new InternalServerErrorException('부정행위 기록 저장 실패');
+      throw new InternalServerErrorException({
+        message: 'AI 분석 요청에 실패했습니다.',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        context: logContext
+      });
     }
   }
 }

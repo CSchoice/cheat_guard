@@ -4,12 +4,12 @@ import { Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';
 import { User } from './entities/user.entity';
 import { UserResponseDto } from './dto/response/user-response.dto';
+import { NotFoundException } from '@nestjs/common';
 import {
-  NotFoundException,
-  InternalServerErrorException,
-  BadRequestException,
   ConflictException,
-} from '@nestjs/common';
+  ValidationException,
+  InternalServerErrorException,
+} from '../../common/exceptions/business.exception';
 import {
   UserNotFoundException,
 } from '../../common/exceptions/business.exception';
@@ -57,56 +57,67 @@ export class UsersService {
     plainPassword: string,
   ): Promise<UserResponseDto> {
     if (!nickname || !plainPassword) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'credentials',
         message: '닉네임과 비밀번호는 필수입니다.',
       });
     }
 
     if (nickname.length < 2 || nickname.length > 50) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'nickname',
         message: '닉네임은 2자 이상 50자 이하이어야 합니다.',
       });
     }
 
     if (!/^[a-zA-Z0-9ㄱ-ㅎ가-힣\s]+$/.test(nickname)) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'nickname',
         message: '닉네임은 한글, 영어, 숫자, 공백만 포함할 수 있습니다.',
       });
     }
 
     if (nickname.includes('  ')) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'nickname',
         message: '닉네임에 연속된 공백이 포함될 수 없습니다.',
       });
     }
 
     if (nickname.trim() === '') {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'nickname',
         message: '닉네임은 공백만 포함할 수 없습니다.',
       });
     }
 
     if (nickname.startsWith(' ') || nickname.endsWith(' ')) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'nickname',
         message: '닉네임은 양쪽 끝에 공백을 포함할 수 없습니다.',
       });
     }
 
     if (nickname.includes('\n') || nickname.includes('\r')) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'nickname',
         message: '닉네임에 줄바꿈 문자가 포함될 수 없습니다.',
       });
     }
 
     if (plainPassword.length < 6) {
-      throw new BadRequestException({
+      throw new ValidationException({
+        field: 'password',
         message: '비밀번호는 최소 6자 이상이어야 합니다.',
       });
     }
 
     const exists = await this.repo.findOne({ where: { nickname } });
     if (exists) {
-      throw new ConflictException('이미 사용 중인 닉네임입니다.');
+      throw new ConflictException('사용자', {
+        nickname,
+        message: '이미 사용 중인 닉네임입니다.'
+      });
     }
 
     try {
