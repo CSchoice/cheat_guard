@@ -1,0 +1,22 @@
+{
+  "type": "mariadb",
+  "host": "localhost",
+  "port": 3306,
+  "username": "root",
+  "password": "password",
+  "database": "cheatguard_dev",
+  "synchronize": false,
+  "logging": true,
+  "entities": ["src/**/*.entity{.ts,.js}"],
+  "migrations": ["src/database/migrations/*{.ts,.js}"],
+  "cli": {
+    "entitiesDir": "src/entities",
+    "migrationsDir": "src/database/migrations"
+  },
+  "migrationsTableName": "migrations",
+  "extra": {
+    "charset": "utf8mb4_general_ci",
+    "connectionLimit": 10
+  },
+  "migrationsRun": false
+}

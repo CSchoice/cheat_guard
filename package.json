@@ -20,11 +20,13 @@
     "test:cov": "cross-env NODE_ENV=test jest --coverage",
     "test:debug": "cross-env NODE_ENV=test node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "cross-env NODE_ENV=test jest --config ./test/jest-e2e.json",
-    "migration:generate": "cross-env NODE_ENV=development npx typeorm-ts-node-commonjs migration:generate src/database/migrations/$npm_config_name -d src/config/database.config.ts",
-    "migration:run": "cross-env NODE_ENV=development npx typeorm-ts-node-commonjs migration:run -d src/config/database.config.ts",
-    "migration:revert": "cross-env NODE_ENV=development npx typeorm-ts-node-commonjs migration:revert -d src/config/database.config.ts",
-    "migration:show": "cross-env NODE_ENV=development npx typeorm-ts-node-commonjs migration:show -d src/config/database.config.ts",
-    "db:drop": "cross-env NODE_ENV=development npx typeorm-ts-node-commonjs schema:drop -d src/config/database.config.ts"
+    "migration:generate": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js migration:generate -n",
+    "migration:run": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js migration:run",
+    "migration:revert": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js migration:revert",
+    "migration:show": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js migration:show",
+    "schema:drop": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js schema:drop",
+    "schema:sync": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js schema:sync",
+    "typeorm": "ts-node -P tsconfig.migrations.json ./node_modules/typeorm/cli.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.830.0",

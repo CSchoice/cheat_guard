@@ -67,3 +67,4 @@ puppeteer/
 .dockerignore
 .env.example
 SETUP.md
+MIGRATION.md

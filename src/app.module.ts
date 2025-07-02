@@ -18,6 +18,7 @@ import databaseConfig from './config/database.config';
 import jwtConfig from './config/jwt.config';
 import redisConfig from './config/redis.config';
 import kafkaConfig from './config/kafka.config';
+import { dataSourceOptions } from './config/data-source';
 
 @Module({
   imports: [
@@ -32,9 +33,10 @@ import kafkaConfig from './config/kafka.config';
     // Database configuration
     TypeOrmModule.forRootAsync({
       imports: [ConfigModule],
-      useFactory: (configService: ConfigService) => ({
-        ...configService.get('database'),
+      useFactory: async (configService: ConfigService) => ({
+        ...dataSourceOptions,
         autoLoadEntities: true,
+        synchronize: configService.get('NODE_ENV') === 'development', // Only in development
       }),
       inject: [ConfigService],
     }),
